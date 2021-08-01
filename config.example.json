@@ -1,0 +1,51 @@
+{
+  "token": "copy-token-here-from-network-tab",
+  "globalRateLimit": 1,
+  "channelRateLimit": 2,
+  "redirects": [
+    {
+      "sources": [
+        "866554433221100420"
+      ],
+      "destinations": [
+        "866554433221100069"
+      ],
+      "options": {
+        "webhook": false,
+
+        "embed": {
+          "title": "Forwarded message:",
+          "color": "#FFFFFF",
+          "timestamp": true,
+          "author": true,
+
+          "fields": {
+            "author": true,
+            "server": true,
+            "channel": true
+          }
+        },
+        "author": false,
+
+        "includeAuthor": true,
+        "includeAuthorAsEmbed": true,
+        "includeAuthorTag": true,
+        "includeChannel": true,
+        "allowMentions": true,
+
+        "copyEmbed": true,
+        "copyAttachments": true,
+        "minLength": 0,
+
+        "allowList": [
+          "humans",
+          "bots",
+          "159985870458322944"
+        ],
+        "denyList": [
+          "866554433221100420"
+        ]
+      }
+    }
+  ]
+}
