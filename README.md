@@ -48,6 +48,7 @@ Example configurations:
       ],
       "options": {
         "webhook": true,
+        "webhookUsernameChannel": true,
 
         "allowMentions": false,
 
@@ -92,6 +93,7 @@ Example configurations:
         },
 
         "includeAuthor": true,
+        "includeChannel": true,
         "includeAuthorAsEmbed": false,
         "includeAuthorTag": true,
         "includeChannel": true,
@@ -147,6 +149,22 @@ All options are ... well.. optional. Defaults are listed for if you don't includ
   * e.g. ```"webhookAvatarURL": "https://i.imgur.com/GX20hLP.png"```
   * (Default is the avatar of message author)
   
+* `copyEmbed`: Copy author embeds.
+  * e.g. ```"copyEmbed": false```
+  * (Default `true`)
+
+* `copyAttachments`: Copy author (file) attachments.
+  * e.g. ```"copyAttachments": false```
+  * (Default `true`)
+
+* `allowEdit`: Automatically edit bot messages when original message was edited.
+  * e.g. ```"allowEdit": false```
+  * (Default `true`)
+  
+* `allowDelete`: Automatically delete bot messages when original message was deleted.
+  * e.g. ```"allowDelete": true```
+  * (Default `false`)
+
 * `allowList`: An array that contains the allowed author(s)' Discord IDs, from which the messages will be copied. Use this to filter whose messages will be copied from the channels. Do not set to an empty array, it won't allow anyone. The IDs must be in quotation marks. You may use `"human"`/`"humans"` and `"bot"`/`"bots"`.
   * e.g. ```"allowList": ["37450973459793455", "94730497535793434"]```
   * (Default `["humans", "bots"]`)

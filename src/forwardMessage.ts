@@ -1,4 +1,3 @@
-import { isWorker } from 'cluster';
 import * as Discord from 'discord.js-self';
 import { ConfigOptions, SendableChannel } from './types';
 import { fetchWebhook } from "./webhookManager";
@@ -25,12 +24,12 @@ export async function forwardMessage(
     if(options.allowMentions){
         allowedMentions = undefined;
     }
-    if(!options.copyAttachments){
+    if (!(options.copyAttachments ?? true)) {
         // if attachments disabled, overwrite attachments with empty collection
         attachments = new Discord.Collection<string, Discord.MessageAttachment>();
     }
 
-    if(options.copyEmbed){
+    if (options.copyEmbed ?? true) {
         embeds.push(...message.embeds);
     }
 
@@ -88,18 +87,19 @@ export async function forwardMessage(
         content += " in *#"+(message.channel as Discord.TextChannel).name+"*";
     }
 
-    let files = attachments.array();
+    let files = Array.from(attachments.values());
     if(hook){
         let sendHook = async ()=>{
             if(!hook) throw "Not hook"; // impossible error, just to avoid confusing ts
+            let usernameDisplay = (options.webhookUsername ?? username) + (options.webhookUsernameChannel ? " - #" + (message.channel as Discord.TextChannel).name : "");
             if(!edit){
                 return {
-                    msg: await hook.send(content, { files, embeds, username: options.webhookUsername ?? username, avatarURL, allowedMentions }),
+                    msg: await hook.send(content, { files, embeds, username: usernameDisplay, avatarURL, allowedMentions }) as Discord.Message,
                     options
                 };
             }else{
                 //@ts-ignore
-                await edit.edit(content, { files, embeds, username: options.webhookUsername ?? username, avatarURL, allowedMentions });
+                await edit.edit(content, { files, embeds, username: usernameDisplay, avatarURL, allowedMentions });
                 return { msg: edit, options };
             }
         };
@@ -144,4 +144,4 @@ function forwardMessageWebhookFailed(channel, message, options, edit){
     }, edit);
 }
 
-let sleep = ms=>new Promise(res=>setTimeout(res, ms));
+let sleep = (ms: number) => new Promise(res => setTimeout(res, ms));

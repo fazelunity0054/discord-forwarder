@@ -2,6 +2,7 @@ import * as Discord from 'discord.js-self';
 export type ConfigOptions = {
     webhook?: boolean
     webhookUsername?: string
+    webhookUsernameChannel?: boolean
     webhookAvatarURL?: string
 
     embed?: {
@@ -44,4 +45,4 @@ export type Config = {
     redirects: ConfigRedirect[];
 };
 
-export type SendableChannel = Discord.NewsChannel | Discord.TextChannel;
+export type SendableChannel = Discord.TextChannel | Discord.NewsChannel;

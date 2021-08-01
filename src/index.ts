@@ -9,7 +9,11 @@ startWebServer();
 readConfig().then(async config => {
 
     // load Discord.js client
-    let client = new Discord.Client({ messageCacheMaxSize: 16 });
+    let client = new Discord.Client({
+        // intents: [
+        //     'GUILD_MESSAGES'
+        // ]
+    });
     client.login(config.token);
 
     let redirects: Map<
@@ -61,7 +65,7 @@ readConfig().then(async config => {
         console.log("Discord client is ready, loading channels...");
 
         // we need this since we disabled all discord.js caching
-        let channelCache: Map<string, Promise<Discord.ChannelTypes>> = new Map();
+        let channelCache: Map<string, Promise<SendableChannel>> = new Map();
 
         // this is meant for loading channels if used cache-less discord.js
         let loadChannelPromises: Promise<void>[] = [];
@@ -69,12 +73,12 @@ readConfig().then(async config => {
             for(let redirect of redirectList[1]){
 
                 let channelPromise = channelCache.get(redirect.destination) ?? client.channels.fetch(redirect.destination);
-                channelCache.set(redirect.destination, channelPromise);
+                channelCache.set(redirect.destination, channelPromise as Promise<SendableChannel>);
 
                 loadChannelPromises.push((async ()=>{
                     let channel = await channelPromise;
-                    if(channel.type == "text"){
-                        redirect.destinationChannel = channel;
+                    if (isTextChannel(channel.type)) {
+                        redirect.destinationChannel = channel as Discord.TextChannel;
                     }else{
                         throw "channel `"+redirect.destination+"` is not a text channel";
                     }
@@ -112,10 +116,11 @@ readConfig().then(async config => {
         for(let { destinationChannel, options } of redirectList){
             if(
                 options.minLength &&
-                message.content.length<options.minLength &&
-                message.content.length!=0 &&
-                message.attachments.array().length==0
+                message.content.length < options.minLength &&
+                message.content.length != 0 &&
+                message.attachments.size == 0
             ) continue;
+            if (!message.content && !(options.copyEmbed ?? true) && !(options.copyAttachments ?? true)) continue;
             let whitelisted = false;
             if (options.allowList) {
                 for(let allowed of options.allowList){
@@ -157,7 +162,7 @@ readConfig().then(async config => {
             });
             if(!promiseAnswer) continue;
             let { msg, options } = promiseAnswer;
-            if(options.allowEdit || options.allowDelete){
+            if ((options.allowEdit ?? true) || options.allowDelete) {
                 // add to edit events
                 msgWatch.push({ message: msg, originalMessage, options });
                 if(msgWatch.length>1000){
@@ -181,7 +186,7 @@ readConfig().then(async config => {
     client.on("messageUpdate", (oldMsg, msg)=>{
         for(let { message, options, originalMessage } of msgWatch){
             if(originalMessage.id == msg.id && originalMessage.channel.id == msg.channel.id){
-                if(options.allowEdit && message.editable){
+                if ((options.allowEdit ?? true) && message.editable) {
                     forwardMessage(msg.channel as SendableChannel, originalMessage, options, message as Discord.Message).catch(error=>{
                         // oh no, let's better not crash whole discord bot and just catch the error
                         console.error(error);
@@ -192,3 +197,8 @@ readConfig().then(async config => {
     });
 
 });
+
+function isTextChannel(type: string) {
+    // return type == "GUILD_PUBLIC_THREAD" || type == "GUILD_PRIVATE_THREAD" || type == "DM" || type == "GUILD_TEXT" || type == "GROUP_DM" || type == "GUILD_NEWS";
+    return type == "text";
+}
