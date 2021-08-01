@@ -64,7 +64,8 @@ Example configurations:
   ]
 }
 ```
-```json{
+```json
+{
   "token": "copy-token-here-from-network-tab",
   "redirects": [
     {
@@ -117,8 +118,8 @@ Example configurations:
 There are two ways of sending messages:
 1. Usual Discord messages
 ![](https://i.imgur.com/JQCDexH.png)
-2. Webhook messages: username and avatar is the same as sender's
-![](https://i.imgur.com/iSNKzQR.png)
+2. Webhook messages: username and avatar is the same as sender's, but more throttling
+![](https://i.imgur.com/B2IMTvz.png)
 
 To have webhook messages, enable `webhook` option:
 
