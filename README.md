@@ -1,22 +1,16 @@
-# Discord Echobot
-[![GitHub license](https://img.shields.io/github/license/MitchTalmadge/discord-echobot)](https://github.com/MitchTalmadge/discord-echobot/blob/master/LICENSE.md)
-[![Actions Status](https://github.com/MitchTalmadge/discord-echobot/workflows/CI/badge.svg)](https://github.com/MitchTalmadge/discord-echobot/actions)
-[![GitHub issues](https://img.shields.io/github/issues/MitchTalmadge/discord-echobot)](https://github.com/MitchTalmadge/discord-echobot/issues)
-
-The purpose of this bot is to allow you to copy messages from one Discord channel to another Discord channel, even if you don't have permission to add a bot account to the guild you are copying from.
+# Discord EchoBot
+Rewritten bot to allow selfbots resending messages to other channels.
 
 This is done by turning your own Discord account into a bot -- copied messages are sent by _you_, not a real bot.
 
 **DISCLAIMER:** Using this (or any) self-bot is **against Discord's [Terms of Service](https://discordapp.com/terms)** — use at your own risk! You may get your account banned and I am NOT RESPONSIBLE for it. You chose to use this. Your responsibility.
-
-![](https://i.imgur.com/A6Y6pBh.png)
 
 ## Deployment
 ### Manual (Your laptop, a server, etc.)
 
 To setup and run this bot, you must first [install Node.js](https://nodejs.org/en/).
 
-1. Download the [latest release](https://github.com/MitchTalmadge/discord-echobot/releases/latest) source code.
+1. Download the [latest release](https://github.com/nxg-org/discord-echobot/archive/refs/heads/master.zip) source code.
 2. Extract the source code to a folder of your choosing.
 3. Configure the bot by **either**:
     - Creating a file called `config.json` in the extracted directory and filling it out. You can see `config.example.json` for an example. Scroll down to see what each option means.
@@ -28,7 +22,7 @@ To setup and run this bot, you must first [install Node.js](https://nodejs.org/e
 
 ### Heroku
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/MitchTalmadge/discord-echobot/tree/master)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/nxg-org/discord-echobot/tree/master)
 
 This bot is compatible with Heroku. You can use the button above to deploy it quickly. 
 
@@ -38,47 +32,127 @@ If the `PORT` environment variable is set (which may happen by default), then th
 
 ## Configuration
 
+Example configurations:
+```json
+{
+  "token": "copy-token-here-from-network-tab",
+  "redirects": [
+    {
+      "sources": [
+        "866554433221100420",
+        "866554433221100421",
+        "866554433221100422"
+      ],
+      "destinations": [
+        "866554433221100069"
+      ],
+      "options": {
+        "webhook": true,
+
+        "allowMentions": false,
+
+        "copyEmbed": true,
+        "copyAttachments": true,
+
+        "allowList": [
+          "humans",
+          "bots",
+          "159985870458322944"
+        ]
+      }
+    }
+  ]
+}
+```
+```json{
+  "token": "copy-token-here-from-network-tab",
+  "redirects": [
+    {
+      "sources": [
+        "866554433221100420"
+      ],
+      "destinations": [
+        "866554433221100069"
+      ],
+      "options": {
+        "webhook": false,
+
+        "embed": {
+          "title": "Forwarded message:",
+          "color": "#2F3136",
+          "timestamp": true,
+          "author": true,
+
+          "fields": {
+            "author": true,
+            "server": true,
+            "channel": true
+          }
+        },
+
+        "includeAuthor": true,
+        "includeAuthorAsEmbed": false,
+        "includeAuthorTag": true,
+        "includeChannel": true,
+        "allowMentions": true,
+
+        "copyEmbed": true,
+        "copyAttachments": true,
+        "minLength": 0,
+
+        "allowList": [
+          "humans",
+          "bots",
+          "159985870458322944"
+        ],
+        "denyList": [
+          "866554433221100420"
+        ]
+      }
+    }
+  ]
+}
+```
+
+There are two ways of sending messages:
+1. Usual Discord messages
+![](https://i.imgur.com/JQCDexH.png)
+2. Webhook messages: username and avatar is the same as sender's
+![](https://i.imgur.com/iSNKzQR.png)
+
+To have webhook messages, enable `webhook` option:
+
 All options are ... well.. optional. Defaults are listed for if you don't include them.
 
-* `title`: Displayed at the top of each message.
-  * e.g. ```"title": "New Copied Message"```
-  * (Default empty)
+* `embed`: Object with all options of embed. If you don't want embed, just delete it.
+  * e.g. ```"embed": { "title": "Forwarded:" }```
+  * (Default: no embed)
 
-* `richEmbed`: Whether or not to use rich embedding. Basically it just looks nicer.
-  * e.g. ```"richEmbed": true```
-  * (Default `false`)
-
-* `richEmbedColor`: The color for the border of the rich embed if `richEmbed` is `true`. To choose the color, get the hex value (like #0078ff) and then go to google and type "0x0078ff to decimal" -> the number you get is what you want.
-  * e.g. ```"richEmbedColor": 30975```
-  * (Default `30975`)
-
-* `includeSource`: Whether to include a line at the top showing the nickname, guild, and channel of the author who sent the message.
-  * e.g. ```"includeSource": true```
-  * (Default `false`)
-
-* `removeEveryone`: Whether to remove all instances of `@everyone` in the messages. This prevents accidental mentioning.
-  * e.g. ```"removeEveryone": true```
-  * (Default `false`)
-
-* `removeHere`: Same as `removeEveryone` except for `@here`.
-  * e.g. ```"removeHere": true```
-  * (Default `false`)
-
-* `copyRichEmbed`: Sometimes a source message may include a rich embed of its own, with or without a normal, non-embed message. This includes gifs. To copy to the rich embed message as well as the normal message contents, this option must be true. If that made no sense, just keep this true.
-  * e.g. ```"copyRichEmbed": true```
-  * (Default `false`)
-
-* `copyAttachments`: When true, the attached files of a message (pdf, image (not gifs! see above), etc.) will be copied into the new message.
-  * e.g. ```"copyAttachments": true```
-  * (Default `false`)
-
-* `minLength`: The minimum number of characters required in a message body for it to be copied. Messages with embeds will always be copied if `copyRichEmbed` is true. Attachments (including pictures) will not be sent if message is too short and has no embeds. Set to `0` to disable.
+* `minLength`: The minimum number of characters required in a message body for it to be copied. Messages with embeds will always be copied if `copyRichEmbed` is true. Attachments (including pictures) will be sent if message is too short. Set to `0` to disable.
   * e.g. ```"minLength": 10```
   * (Default `0`)
 
-* `allowList`: An array that contains the allowed author(s)' Discord IDs, from which the messages will be copied. Use this to filter whose messages will be copied from the channels. Set to an empty array to disable. The IDs must be in quotation marks.
+* `webhook`: Send messages using webhook, allows sending messages with username and avatar, but there's more rate-limit and it will not edit messages.
+  * e.g. ```"webhook": true```
+  * (Default `false`)
+
+* `webhookUsername`: Username for webhook message.
+  * e.g. ```"webhookUsername": "Baba"```
+  * (Default is the username of message author)
+
+* `webhookAvatarURL`: URL of message avatar.
+  * e.g. ```"webhookAvatarURL": "https://i.imgur.com/GX20hLP.png"```
+  * (Default is the avatar of message author)
+  
+* `allowList`: An array that contains the allowed author(s)' Discord IDs, from which the messages will be copied. Use this to filter whose messages will be copied from the channels. Do not set to an empty array, it won't allow anyone. The IDs must be in quotation marks. You may use `"human"`/`"humans"` and `"bot"`/`"bots"`.
   * e.g. ```"allowList": ["37450973459793455", "94730497535793434"]```
+  * (Default `["humans", "bots"]`)
+
+* `denyList`: Similar as `allowList`, but instead of allowing authors, it denies them.
+  * e.g. ```"denyList": ["37450973459793455", "94730497535793434"]```
   * (Default `[]`)
+
+![](https://i.imgur.com/EWCTUq8.png)
 
 ### Finding your Token
 

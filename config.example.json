@@ -1,7 +1,5 @@
 {
   "token": "copy-token-here-from-network-tab",
-  "globalRateLimit": 1,
-  "channelRateLimit": 2,
   "redirects": [
     {
       "sources": [
@@ -12,6 +10,7 @@
       ],
       "options": {
         "webhook": true,
+        "webhookUsername": "Baba",
 
         "embed": {
           "title": "Forwarded message:",
@@ -25,16 +24,17 @@
             "channel": true
           }
         },
-        "author": false,
 
         "includeAuthor": true,
         "includeAuthorAsEmbed": true,
         "includeAuthorTag": true,
         "includeChannel": true,
+
         "allowMentions": true,
 
         "copyEmbed": true,
         "copyAttachments": true,
+
         "minLength": 0,
 
         "allowList": [

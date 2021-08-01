@@ -2,6 +2,10 @@ import * as fs from "fs-extra";
 import { Config } from "./types";
 
 export async function readConfig() {
+    if (process.env.ECHOBOT_CONFIG_JSON) {
+        return JSON.parse(process.env.ECHOBOT_CONFIG_JSON);
+    }
+
     // check if file exists
     if(!(await fs.stat("./config.json")).isFile()) throw "config: file not found"; 
 

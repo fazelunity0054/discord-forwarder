@@ -49,17 +49,17 @@ export async function forwardMessage(
             // )
             // .setImage('https://i.imgur.com/wSTFkRM.png')
             // .setFooter('Some footer text here', 'https://i.imgur.com/wSTFkRM.png');
-        options.embed?.timestamp       ?? embed.setTimestamp(message.createdAt)
-        options.embed?.author          ?? embed.setAuthor(username+"#"+author.discriminator, avatarURL, message.url)
+        options.embed?.timestamp && embed.setTimestamp(message.createdAt)
+        options.embed?.author && embed.setAuthor(username + "#" + author.discriminator, avatarURL, message.url)
 
-        options.embed?.fields?.author  ?? embed.addField('Author', "<@"+author.id+">", true)
-        options.embed?.fields?.server  ?? embed.addField('Server', message.guild.name, true)
-        options.embed?.fields?.channel ?? embed.addField('Channel', "#"+(message.channel as Discord.TextChannel).name, true)
+        options.embed?.fields?.author && embed.addField('Author', "<@" + author.id + ">", true)
+        options.embed?.fields?.server && embed.addField('Server', message.guild.name, true)
+        options.embed?.fields?.channel && embed.addField('Channel', "#" + (message.channel as Discord.TextChannel).name, true)
 
         embeds.push(embed);
     }else{
         content = message.content;
-        if(options?.includeAuthorAsEmbed){
+        if (options.includeAuthorAsEmbed) {
             embeds.push(
                 new Discord.MessageEmbed()
                     .setColor("#2F3136")

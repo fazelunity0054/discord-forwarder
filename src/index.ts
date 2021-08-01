@@ -117,27 +117,33 @@ readConfig().then(async config => {
                 message.attachments.array().length==0
             ) continue;
             let whitelisted = false;
-            for(let allowed of options.allowList){
-                if(message.author.bot){
-                    whitelisted ||= allowed=="bot";
-                    whitelisted ||= allowed=="bots";
-                }else{
-                    whitelisted ||= allowed=="human";
-                    whitelisted ||= allowed=="humans";
+            if (options.allowList) {
+                for(let allowed of options.allowList){
+                    if(message.author.bot){
+                        whitelisted ||= allowed=="bot";
+                        whitelisted ||= allowed=="bots";
+                    }else{
+                        whitelisted ||= allowed=="human";
+                        whitelisted ||= allowed=="humans";
+                    }
+                    whitelisted ||= message.author.id == allowed;
                 }
-                whitelisted ||= message.author.id == allowed;
+            } else {
+                whitelisted = true;
             }
-            for(let deny of options.denyList){
-                if(message.author.bot){
-                    whitelisted &&= deny!="bot";
-                    whitelisted &&= deny!="bots";
-                }else{
-                    whitelisted &&= deny!="human";
-                    whitelisted &&= deny!="humans";
+            if (options.denyList) {
+                for(let deny of options.denyList){
+                    if(message.author.bot){
+                        whitelisted &&= deny!="bot";
+                        whitelisted &&= deny!="bots";
+                    }else{
+                        whitelisted &&= deny!="human";
+                        whitelisted &&= deny!="humans";
+                    }
+                    whitelisted &&= message.author.id != deny;
                 }
-                whitelisted &&= message.author.id != deny;
             }
-            if(!whitelisted) continue;
+            if (!whitelisted) continue;
             promisesMsgs.push({
                 promise: forwardMessage(destinationChannel, message, options, false),
                 originalMessage: message as Discord.Message

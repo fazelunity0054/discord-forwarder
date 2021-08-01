@@ -24,7 +24,7 @@ export type ConfigOptions = {
     allowMentions?: boolean
     allowEdit?: boolean
     allowDelete?: boolean
-    
+
     copyEmbed?: boolean
     copyAttachments?: boolean
     minLength?: number
