@@ -11,7 +11,7 @@
         "866554433221100069"
       ],
       "options": {
-        "webhook": false,
+        "webhook": true,
 
         "embed": {
           "title": "Forwarded message:",
