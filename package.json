@@ -19,7 +19,7 @@
     "ext": "*"
   },
   "dependencies": {
-    "discord.js-self": "github:nxg-org/discord.js-self",
+    "discord.js": "github:nxg-org/discord.js",
     "fs-extra": "^10.0.0",
     "winston": "^3.3.3"
   },
