@@ -1,4 +1,4 @@
-import * as Discord from 'discord.js-self';
+import * as Discord from 'discord.js';
 export type ConfigOptions = {
     webhook?: boolean
     webhookUsername?: string

@@ -1,4 +1,4 @@
-import * as Discord from 'discord.js-self';
+import * as Discord from 'discord.js';
 import { readConfig } from "./readConfig";
 import { ConfigOptions, SendableChannel } from "./types";
 import { startWebServer } from "./webServer";

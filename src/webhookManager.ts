@@ -1,4 +1,4 @@
-import * as Discord from 'discord.js-self';
+import * as Discord from 'discord.js';
 import { SendableChannel } from './types';
 
 let cachedWebhooks: Map<string, Discord.Webhook> = new Map();
