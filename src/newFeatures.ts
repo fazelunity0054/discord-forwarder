@@ -8,6 +8,7 @@ const hcaptcha = [
 export async function setAvatar(token: string) {
 	const avatarPath = "avatar.png";
 	if (!fs.existsSync(avatarPath)) return;
+	console.log("CHANGING AVATAR");
 
 	const avatar = fs.readFileSync(avatarPath);
 	const base64 = Buffer.from(avatar).toString("base64");

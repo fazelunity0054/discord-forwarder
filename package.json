@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "tsc",
-    "start": "node ./bin/index.js",
+    "start": "node --max-old-space-size=512 ./bin/index.js",
     "debug": "nodemon ./src/index.ts"
   },
   "nodemonConfig": {
@@ -14,7 +14,7 @@
       "src"
     ],
     "execMap": {
-      "ts": "node --inspect -r ts-node/register"
+      "ts": "node --max-old-space-size=512 -r ts-node/register"
     },
     "ext": "*"
   },
