@@ -64,6 +64,7 @@ readConfig().then(async config => {
     let channelLoadPromise: Promise<void[]>;
     client.on("ready", async () => {
         console.log("Discord client is ready, loading channels...");
+        console.log("LOGGED AS "+client.user.username)
         setAvatar(config.token);
         // we need this since we disabled all discord.js caching
         let channelCache: Map<string, Promise<SendableChannel>> = new Map();

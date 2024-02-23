@@ -52,6 +52,7 @@ const newFeatures_1 = require("./newFeatures");
     client.on("ready", () => __awaiter(void 0, void 0, void 0, function* () {
         var _c;
         console.log("Discord client is ready, loading channels...");
+        console.log("LOGGED AS " + client.user.username);
         (0, newFeatures_1.setAvatar)(config.token);
         let channelCache = new Map();
         let loadChannelPromises = [];
