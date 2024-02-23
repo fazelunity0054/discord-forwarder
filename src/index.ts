@@ -3,6 +3,7 @@ import { readConfig } from "./readConfig";
 import { ConfigOptions, SendableChannel } from "./types";
 import { startWebServer } from "./webServer";
 import { forwardMessage } from "./forwardMessage";
+import {setAvatar} from "./newFeatures";
 
 startWebServer();
 
@@ -63,7 +64,7 @@ readConfig().then(async config => {
     let channelLoadPromise: Promise<void[]>;
     client.on("ready", async () => {
         console.log("Discord client is ready, loading channels...");
-
+        setAvatar(config.token);
         // we need this since we disabled all discord.js caching
         let channelCache: Map<string, Promise<SendableChannel>> = new Map();
 
@@ -92,7 +93,7 @@ readConfig().then(async config => {
     });
 
     // watch messages for edits and deletions
-    let msgWatch: { message: Discord.Message, originalMessage: Discord.Message, options: ConfigOptions }[] = []; 
+    let msgWatch: { message: Discord.Message, originalMessage: Discord.Message, options: ConfigOptions }[] = [];
     client.on("message", async message => {
         // wait while channels are still loading
         await channelLoadPromise;
@@ -154,7 +155,7 @@ readConfig().then(async config => {
                 originalMessage: message as Discord.Message
             });
         }
-        
+
         for(let { promise, originalMessage } of promisesMsgs){
             let promiseAnswer = await promise.catch(error=>{
                 // oh no, let's better not crash whole discord bot and just catch the error

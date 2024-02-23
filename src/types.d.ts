@@ -1,10 +1,10 @@
 import * as Discord from 'discord.js';
+import {MessageAttachment} from "discord.js";
 export type ConfigOptions = {
     webhook?: boolean
     webhookUsername?: string
     webhookUsernameChannel?: boolean
     webhookAvatarURL?: string
-
     embed?: {
         title?: string
         color?: Discord.ColorResolvable
@@ -16,12 +16,10 @@ export type ConfigOptions = {
             channel?: boolean
         }
     },
-
     includeAuthorTag?: boolean
     includeAuthorAsEmbed?: boolean
     includeAuthor?: boolean
     includeChannel?: boolean
-
     allowMentions?: boolean
     allowEdit?: boolean
     allowDelete?: boolean
@@ -31,7 +29,8 @@ export type ConfigOptions = {
     minLength?: number
 
     allowList?: []
-    denyList?: []
+    denyList?: [],
+    filters: ConfigFilters
 };
 
 export type ConfigRedirect = {
@@ -39,6 +38,16 @@ export type ConfigRedirect = {
     destinations?: string[]
     options?: ConfigOptions
 };
+
+
+export type ConfigFilters = {
+    link1?: boolean
+    link2?: boolean,
+    blockedUser: string[],
+    texts: string[],
+    onlyBot: boolean,
+    removeMedia: ("image" | "video" | "gif")[]
+}
 
 export type Config = {
     token: string,
