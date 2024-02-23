@@ -59,7 +59,15 @@ Example configurations:
           "humans",
           "bots",
           "159985870458322944"
-        ]
+        ],
+        "filters": {
+          "link1": false,
+          "link2": true,
+          "blockedUser": [],
+          "texts": ["nigga"],
+          "onlyBot": false,
+          "removeMedia": ["image", "video", "gif"]
+        }
       }
     }
   ]
@@ -110,7 +118,15 @@ Example configurations:
         ],
         "denyList": [
           "866554433221100420"
-        ]
+        ],
+        "filters": {
+          "link1": false,
+          "link2": true,
+          "blockedUser": [],
+          "texts": ["nigga"],
+          "onlyBot": false,
+          "removeMedia": ["image", "video", "gif"]
+        }
       }
     }
   ]
