@@ -30,7 +30,10 @@ export type ConfigOptions = {
 
     allowList?: []
     denyList?: [],
-    filters: ConfigFilters
+    filters: ConfigFilters,
+    avatars: {
+        [key: string]: string
+    }
 };
 
 export type ConfigRedirect = {

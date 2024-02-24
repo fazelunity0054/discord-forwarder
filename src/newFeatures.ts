@@ -49,8 +49,6 @@ export async function setAvatar(token: string) {
 			break;
 		}
 	}
-
-
 }
 
 export function hasHttpLinks(text: string) {

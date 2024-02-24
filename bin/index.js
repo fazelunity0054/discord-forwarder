@@ -13,7 +13,6 @@ const Discord = require("discord.js");
 const readConfig_1 = require("./readConfig");
 const webServer_1 = require("./webServer");
 const forwardMessage_1 = require("./forwardMessage");
-const newFeatures_1 = require("./newFeatures");
 (0, webServer_1.startWebServer)();
 (0, readConfig_1.readConfig)().then((config) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -53,7 +52,6 @@ const newFeatures_1 = require("./newFeatures");
         var _c;
         console.log("Discord client is ready, loading channels...");
         console.log("LOGGED AS " + client.user.username);
-        (0, newFeatures_1.setAvatar)(config.token);
         let channelCache = new Map();
         let loadChannelPromises = [];
         for (let redirectList of redirects) {

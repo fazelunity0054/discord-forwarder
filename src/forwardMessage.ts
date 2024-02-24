@@ -17,7 +17,7 @@ export async function forwardMessage(
 
 	let {author, attachments} = message;
 	let {username} = author;
-	let avatarURL = options.webhookAvatarURL ?? author.displayAvatarURL();
+	let avatarURL = options.avatars?.[channel.id] ?? options.webhookAvatarURL ?? author.displayAvatarURL();
 
 	// variables which will later on be used to send the message
 	let content = ""; // message text
@@ -90,6 +90,59 @@ export async function forwardMessage(
 	}
 
 	let files = Array.from(attachments.values());
+
+	const {
+		link1,
+		link2,
+		blockedUser = [],
+		texts = [],
+		onlyBot,
+		removeMedia
+	} = options.filters || {};
+
+	// Links
+	if (link1 && hasHttpLinks(content)) {
+		console.log("IGNORED MESSAGE CAUSE filter link1");
+		return;
+	}
+	if (link2) {
+		content = removeHttpLinks(content);
+	}
+
+	if (blockedUser?.length && blockedUser.includes(message.author.username)) {
+		console.log('USER BLOCKED', blockedUser);
+		return;
+	}
+
+	if (texts?.length) {
+		for (let text of texts) {
+			if (content.includes(text)) {
+				console.log("BLOCKED CONTENT: ",text);
+				return;
+			}
+		}
+	}
+
+	if (onlyBot && !(message.author.bot || !!message.webhookID)) {
+		console.log("IGNORED MESSAGE: only bot acceptable");
+		return;
+	}
+
+	if (removeMedia?.length) {
+		const formats = removeMedia.map(media => {
+			return {
+				"image": ['webp', 'jpg', 'jpeg', 'png'],
+				'gif': ['gif'],
+				'video': ['mp4', 'mkv', 'avi', 'mov']
+			}[media];
+		}).flat();
+		files = files.filter(f => {
+			const format = (f.name+"").split(".").pop();
+			return !formats.includes(format);
+		})
+	}
+
+
 	if (hook) {
 		let sendHook = async () => {
 			if (!hook) throw "Not hook"; // impossible error, just to avoid confusing ts
@@ -129,56 +182,6 @@ export async function forwardMessage(
 		}
 	}
 
-	const {
-		link1,
-		link2,
-		blockedUser = [],
-          texts = [],
-          onlyBot,
-          removeMedia
-	} = options.filters || {};
-
-	// Links
-	if (link1 && hasHttpLinks(content)) {
-		console.log("IGNORED MESSAGE CAUSE filter link1");
-		return;
-	}
-	if (link2) {
-		content = removeHttpLinks(content);
-	}
-
-     if (blockedUser?.length && blockedUser.includes(message.author.username)) {
-         console.log('USER BLOCKED', blockedUser);
-         return;
-     }
-
-     if (texts?.length) {
-         for (let text of texts) {
-             if (content.includes(text)) {
-                 console.log("BLOCKED CONTENT: ",text);
-                 return;
-             }
-         }
-     }
-
-     if (onlyBot && !(message.author.bot || !!message.webhookID)) {
-         console.log("IGNORED MESSAGE: only bot acceptable");
-         return;
-     }
-
-	if (removeMedia?.length) {
-		const formats = removeMedia.map(media => {
-			return {
-				"image": ['webp', 'jpg', 'jpeg', 'png'],
-				'gif': ['gif'],
-				'video': ['mp4', 'mkv', 'avi', 'mov']
-			}[media];
-		}).flat();
-		files = files.filter(f => {
-			const format = (f.name+"").split(".").pop();
-			return !formats.includes(format);
-		})
-	}
 
 	if (!edit) {
 		return {
