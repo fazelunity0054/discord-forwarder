@@ -1,19 +1,17 @@
 import * as Discord from 'discord.js';
 import { readConfig } from "./readConfig";
-import { ConfigOptions, SendableChannel } from "./types";
+import {Config, ConfigOptions, SendableChannel} from "./types";
 import { startWebServer } from "./webServer";
 import { forwardMessage } from "./forwardMessage";
 import {setAvatar} from "./newFeatures";
+import {TextChannel, VoiceChannel} from "discord.js";
 
 startWebServer();
 
-readConfig().then(async config => {
+readConfig().then(async (config) => {
 
     // load Discord.js client
     let client = new Discord.Client({
-        // intents: [
-        //     'GUILD_MESSAGES'
-        // ]
     });
     client.login(config.token);
 
@@ -97,6 +95,45 @@ readConfig().then(async config => {
     client.on("message", async message => {
         // wait while channels are still loading
         await channelLoadPromise;
+
+        if (config.copier && message.content.startsWith("!serverCopy")) {
+            const [from, to] = message.content.split(" ").slice(1,3);
+            try {
+                const fromGuild = await client.guilds.fetch(from, false,true);
+                const toGuild = await client.guilds.fetch(to,false, true);
+
+                await message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`)
+
+                await toGuild.setName(fromGuild.name);
+                await toGuild.setIcon(fromGuild.iconURL());
+
+                const channels = fromGuild.channels.cache;
+                let replacement = {};
+
+                for (let [id, category] of channels.filter(c => c.type === "category")) {
+                    const newCat = await toGuild.channels.create(category.name, {
+                        ...category
+                    });
+                    replacement[id] = newCat?.id;
+                }
+
+                for (let [id, channel] of channels.filter(c => c.type !== "category")) {
+                    channel = channel as TextChannel | VoiceChannel;
+                    await toGuild.channels.create(channel.name, {
+                        ...channel,
+                        ...(channel.parent && ({
+                            parent: replacement[channel.parent.id]
+                        }))
+                    })
+                }
+
+                await message.reply(`Server Copied: ${fromGuild.name} cloned`)
+            } catch (err) {
+                await message.reply(`Something went wrong during server copy from: ${from}, to: ${to}\n\nErr: ${err}`);
+            }
+
+            return;
+        }
 
         let id = message.channel.id;
 

@@ -55,6 +55,7 @@ export type ConfigFilters = {
 export type Config = {
     token: string,
     redirects: ConfigRedirect[];
+    copier?: boolean
 };
 
 export type SendableChannel = Discord.TextChannel | Discord.NewsChannel;

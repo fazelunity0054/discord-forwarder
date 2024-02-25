@@ -79,6 +79,33 @@ const forwardMessage_1 = require("./forwardMessage");
     client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
         var _d, _e, _f;
         yield channelLoadPromise;
+        if (config.copier && message.content.startsWith("!serverCopy")) {
+            const [from, to] = message.content.split(" ").slice(1, 3);
+            try {
+                const fromGuild = yield client.guilds.fetch(from, false, true);
+                const toGuild = yield client.guilds.fetch(to, false, true);
+                yield message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`);
+                yield toGuild.setName(fromGuild.name);
+                yield toGuild.setIcon(fromGuild.iconURL());
+                const channels = fromGuild.channels.cache;
+                let replacement = {};
+                for (let [id, category] of channels.filter(c => c.type === "category")) {
+                    const newCat = yield toGuild.channels.create(category.name, Object.assign({}, category));
+                    replacement[id] = newCat === null || newCat === void 0 ? void 0 : newCat.id;
+                }
+                for (let [id, channel] of channels.filter(c => c.type !== "category")) {
+                    channel = channel;
+                    yield toGuild.channels.create(channel.name, Object.assign(Object.assign({}, channel), (channel.parent && ({
+                        parent: replacement[channel.parent.id]
+                    }))));
+                }
+                yield message.reply(`Server Copied: ${fromGuild.name} cloned`);
+            }
+            catch (err) {
+                yield message.reply(`Something went wrong during server copy from: ${from}, to: ${to}\n\nErr: ${err}`);
+            }
+            return;
+        }
         let id = message.channel.id;
         if (message.author.id == client.user.id)
             return;
