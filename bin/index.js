@@ -13,6 +13,7 @@ const Discord = require("discord.js");
 const readConfig_1 = require("./readConfig");
 const webServer_1 = require("./webServer");
 const forwardMessage_1 = require("./forwardMessage");
+const fs = require("fs");
 (0, webServer_1.startWebServer)();
 (0, readConfig_1.readConfig)().then((config) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -85,20 +86,76 @@ const forwardMessage_1 = require("./forwardMessage");
                 const fromGuild = yield client.guilds.fetch(from, false, true);
                 const toGuild = yield client.guilds.fetch(to, false, true);
                 yield message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`);
-                yield toGuild.setName(fromGuild.name);
-                yield toGuild.setIcon(fromGuild.iconURL());
+                toGuild.setName(fromGuild.name);
+                toGuild.setIcon(fromGuild.iconURL());
+                let roleReplacement = {};
+                message.reply("Cloning Roles");
+                const roles = fromGuild.roles.cache;
+                for (let [id, role] of roles) {
+                    const created = yield toGuild.roles.create({
+                        data: {
+                            name: role.name,
+                            color: role.color,
+                            hoist: role.hoist,
+                            position: role.position,
+                            permissions: role.permissions,
+                            mentionable: role.mentionable
+                        }
+                    });
+                    roleReplacement[role.id] = created.id;
+                }
+                message.reply("Cloning Channel");
                 const channels = fromGuild.channels.cache;
-                let replacement = {};
+                let channelReplacement = {};
                 for (let [id, category] of channels.filter(c => c.type === "category")) {
                     const newCat = yield toGuild.channels.create(category.name, Object.assign({}, category));
-                    replacement[id] = newCat === null || newCat === void 0 ? void 0 : newCat.id;
+                    channelReplacement[id] = newCat === null || newCat === void 0 ? void 0 : newCat.id;
                 }
+                let reds = {};
                 for (let [id, channel] of channels.filter(c => c.type !== "category")) {
                     channel = channel;
-                    yield toGuild.channels.create(channel.name, Object.assign(Object.assign({}, channel), (channel.parent && ({
-                        parent: replacement[channel.parent.id]
-                    }))));
+                    const newChannel = yield toGuild.channels.create(channel.name, Object.assign(Object.assign(Object.assign({}, channel), (channel.parent && ({
+                        parent: channelReplacement[channel.parent.id]
+                    }))), { permissionOverwrites: channel.permissionOverwrites.map(c => (Object.assign(Object.assign({}, c), { id: roleReplacement[c === null || c === void 0 ? void 0 : c.id] || (c === null || c === void 0 ? void 0 : c.id) }))) }));
+                    if (channel.type === "text") {
+                        reds[channel === null || channel === void 0 ? void 0 : channel.id] = newChannel;
+                    }
                 }
+                message.reply("Register Redirect");
+                const options = {
+                    "webhook": true,
+                    "webhookUsernameChannel": false,
+                    "allowMentions": false,
+                    "copyEmbed": true,
+                    "copyAttachments": true,
+                    "allowList": [
+                        "humans",
+                        "bots",
+                        "159985870458322944"
+                    ],
+                    "filters": {
+                        "link1": false,
+                        "link2": true,
+                        "blockedUser": [],
+                        "texts": [],
+                        "onlyBot": true,
+                        "removeMedia": []
+                    }
+                };
+                const configPath = process.cwd() + "/config.json";
+                let config = JSON.parse(fs.readFileSync(configPath).toString() || "{}");
+                for (let [source, destination] of Object.entries(reds)) {
+                    const preRedirects = redirects.get(source) || [];
+                    preRedirects.push({ destination: destination.id, destinationChannel: destination, options });
+                    redirects.set(source, preRedirects);
+                    config.redirects.push({
+                        sources: [source],
+                        destinations: [destination === null || destination === void 0 ? void 0 : destination.id],
+                        options
+                    });
+                }
+                message.reply("Update Config File");
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
                 yield message.reply(`Server Copied: ${fromGuild.name} cloned`);
             }
             catch (err) {

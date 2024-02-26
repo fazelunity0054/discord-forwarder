@@ -105,15 +105,6 @@ readConfig().then(async (config) => {
 
                 await message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`)
 
-                message.reply(`Deleting ${toGuild.name} roles`);
-                for (let [id, role] of toGuild.roles.cache) {
-                    role.delete("").catch(console.error);
-                }
-                message.reply("Deleting Channels")
-                for (let [id, channel] of toGuild.channels.cache) {
-                    channel.delete("").catch(console.error);
-                }
-
                 toGuild.setName(fromGuild.name);
                 toGuild.setIcon(fromGuild.iconURL());
 
