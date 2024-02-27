@@ -26,8 +26,6 @@ function readConfig() {
             throw "config: `token` is missing";
         if (!Array.isArray(config.redirects))
             throw "config: `redirects` is not an array or is undefined";
-        if (config.redirects.length == 0)
-            throw "config: `redirects` is empty";
         return config;
     });
 }

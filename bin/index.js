@@ -52,6 +52,10 @@ const forwardMessage_1 = require("./forwardMessage");
         var _c;
         console.log("Discord client is ready, loading channels...");
         console.log("LOGGED AS " + client.user.username);
+        if (!config.redirects.length) {
+            console.log("NO REDIRECT FOUND");
+            return;
+        }
         let channelCache = new Map();
         let loadChannelPromises = [];
         for (let redirectList of redirects) {

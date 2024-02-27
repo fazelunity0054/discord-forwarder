@@ -26,6 +26,7 @@ readConfig().then(async (config) => {
     > = new Map();
 
     // loop through redirects and put them in a Map
+
     for(let redirect of config.redirects){
 
         // check if redirect is valid
@@ -64,6 +65,10 @@ readConfig().then(async (config) => {
     client.on("ready", async () => {
         console.log("Discord client is ready, loading channels...");
         console.log("LOGGED AS "+client.user.username)
+        if (!config.redirects.length) {
+            console.log("NO REDIRECT FOUND");
+            return;
+        }
         // we need this since we disabled all discord.js caching
         let channelCache: Map<string, Promise<SendableChannel>> = new Map();
 
