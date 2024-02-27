@@ -103,12 +103,15 @@ readConfig().then(async (config) => {
                 const fromGuild = await client.guilds.fetch(from, false,true);
                 const toGuild = await client.guilds.fetch(to,false, true);
 
+
                 await message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`)
 
                 toGuild.setName(fromGuild.name);
                 toGuild.setIcon(fromGuild.iconURL());
 
-                let roleReplacement = {};
+                let roleReplacement = {
+                    [fromGuild.roles.everyone?.id]: toGuild.roles.everyone?.id
+                };
                 message.reply("Cloning Roles")
                 const roles = fromGuild.roles.cache;
                 for (let [id, role] of roles) {

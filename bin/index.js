@@ -78,7 +78,7 @@ const fs = require("fs");
     }));
     let msgWatch = [];
     client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
-        var _d, _e, _f;
+        var _d, _e, _f, _g, _h;
         yield channelLoadPromise;
         if (config.copier && message.content.startsWith("!serverCopy")) {
             const [from, to] = message.content.split(" ").slice(1, 3);
@@ -88,7 +88,9 @@ const fs = require("fs");
                 yield message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`);
                 toGuild.setName(fromGuild.name);
                 toGuild.setIcon(fromGuild.iconURL());
-                let roleReplacement = {};
+                let roleReplacement = {
+                    [(_d = fromGuild.roles.everyone) === null || _d === void 0 ? void 0 : _d.id]: (_e = toGuild.roles.everyone) === null || _e === void 0 ? void 0 : _e.id
+                };
                 message.reply("Cloning Roles");
                 const roles = fromGuild.roles.cache;
                 for (let [id, role] of roles) {
@@ -178,7 +180,7 @@ const fs = require("fs");
                 message.content.length != 0 &&
                 message.attachments.size == 0)
                 continue;
-            if (!message.content && !((_d = options.copyEmbed) !== null && _d !== void 0 ? _d : true) && !((_e = options.copyAttachments) !== null && _e !== void 0 ? _e : true))
+            if (!message.content && !((_f = options.copyEmbed) !== null && _f !== void 0 ? _f : true) && !((_g = options.copyAttachments) !== null && _g !== void 0 ? _g : true))
                 continue;
             let whitelisted = false;
             if (options.allowList) {
@@ -224,7 +226,7 @@ const fs = require("fs");
             if (!promiseAnswer)
                 continue;
             let { msg, options } = promiseAnswer;
-            if (((_f = options.allowEdit) !== null && _f !== void 0 ? _f : true) || options.allowDelete) {
+            if (((_h = options.allowEdit) !== null && _h !== void 0 ? _h : true) || options.allowDelete) {
                 msgWatch.push({ message: msg, originalMessage, options });
                 if (msgWatch.length > 1000) {
                     msgWatch.shift();
