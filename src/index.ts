@@ -1,5 +1,5 @@
 import * as Discord from 'discord.js';
-import { readConfig } from "./readConfig";
+import {readConfig, updateConfig} from "./readConfig";
 import {Config, ConfigOptions, SendableChannel} from "./types";
 import { startWebServer } from "./webServer";
 import { forwardMessage } from "./forwardMessage";
@@ -74,18 +74,25 @@ readConfig().then(async (config) => {
 
                 let channelPromise = channelCache.get(redirect.destination) ?? client.channels.fetch(redirect.destination);
                 channelCache.set(redirect.destination, channelPromise as Promise<SendableChannel>);
-
+                channelPromise.catch((e) => {
+                    removeRedirect(redirect.destination);
+                    console.log("CHANNEL NOT FOUND ON FETCH, removed");
+                })
                 loadChannelPromises.push((async ()=>{
-                    let channel = await channelPromise;
-                    if (isTextChannel(channel.type)) {
-                        redirect.destinationChannel = channel as Discord.TextChannel;
-                    }else{
-                        throw "channel `"+redirect.destination+"` is not a text channel";
+                    try {
+                        let channel = await channelPromise;
+                        if (isTextChannel(channel.type)) {
+                            redirect.destinationChannel = channel as Discord.TextChannel;
+                        }else{
+                            throw "channel `"+redirect.destination+"` is not a text channel";
+                        }
+                    } catch {
+                        removeRedirect(redirect.destination);
                     }
                 })());
 
-            };
-        };
+            }
+        }
         channelLoadPromise = Promise.all(loadChannelPromises);
         await channelLoadPromise;
         console.log("Channels loaded");
@@ -97,14 +104,25 @@ readConfig().then(async (config) => {
         // wait while channels are still loading
         await channelLoadPromise;
 
-        if (config.copier && message.content.startsWith("!serverCopy")) {
-            const [from, to] = message.content.split(" ").slice(1,3);
+        if (config.copier && message.content.startsWith("!serverCopy") && message.mentions.has(client.user)) {
+            const [from, to, del] = message.content.split(" ").slice(1);
             try {
                 const fromGuild = await client.guilds.fetch(from, false,true);
                 const toGuild = await client.guilds.fetch(to,false, true);
 
 
                 await message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`)
+
+                if (del?.startsWith?.('-y')) {
+                    message.reply(`Deleting ${toGuild.name} roles`);
+                    for (let [id, role] of toGuild.roles.cache) {
+                        role.delete("").catch(console.error);
+                    }
+                    message.reply("Deleting Channels")
+                    for (let [id, channel] of toGuild.channels.cache) {
+                        channel.delete("").catch(console.error);
+                    }
+                }
 
                 toGuild.setName(fromGuild.name);
                 toGuild.setIcon(fromGuild.iconURL());
@@ -115,6 +133,7 @@ readConfig().then(async (config) => {
                 message.reply("Cloning Roles")
                 const roles = fromGuild.roles.cache;
                 for (let [id, role] of roles) {
+                    if (fromGuild.roles.everyone.id === role.id) continue;
                     const created = await toGuild.roles.create({
                         data: {
                             name: role.name,
@@ -182,23 +201,28 @@ readConfig().then(async (config) => {
                     }
                 };
 
-                const configPath = process.cwd()+"/config.json";
-                let config = JSON.parse(fs.readFileSync(configPath).toString() || "{}");
-                for (let [source, destination] of Object.entries(reds)) {
-                    const preRedirects = redirects.get(source) || [];
-                    // @ts-ignore
-                    preRedirects.push({destination: destination.id, destinationChannel: destination, options} as any);
-                    redirects.set(source, preRedirects);
+                updateConfig(async config => {
+                    message.reply("Update Config File");
 
-                    config.redirects.push({
-                        sources: [source],
-                        //@ts-ignore
-                        destinations: [destination?.id],
-                        options
-                    });
-                }
-                message.reply("Update Config File");
-                fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+                    for (let [source, destination] of Object.entries(reds)) {
+                        const preRedirects = redirects.get(source) || [];
+                        // @ts-ignore
+                        preRedirects.push({destination: destination.id, destinationChannel: destination, options} as any);
+                        redirects.set(source, preRedirects);
+
+                        config.redirects.push({
+                            sources: [source],
+                            //@ts-ignore
+                            destinations: [destination?.id],
+                            options
+                        });
+                    }
+
+                    return config;
+                }).catch((e)=>{
+                    message.reply(`Failed to update Config File\n${e}`)
+                    console.error(e);
+                })
 
                 await message.reply(`Server Copied: ${fromGuild.name} cloned`)
             } catch (err) {
@@ -306,6 +330,30 @@ readConfig().then(async (config) => {
             }
         }
     });
+
+    function removeRedirect(id: string) {
+        updateConfig(async config => {
+            config.redirects = config.redirects.filter(red => {
+                return !(red.sources.includes(id+"") || red.destinations.includes(id+""))
+            })
+            return config;
+        });
+
+        redirects.delete(id);
+
+        const reds = redirects.entries();
+        for (let [id, data] of reds) {
+            data = data.filter(d => d.destination !== id);
+            redirects.set(id, data);
+        }
+    }
+
+    client.on("channelDelete", (e)=>{
+        if (e.type === "text") {
+            const id = e.id;
+            removeRedirect(id);
+        }
+    })
 
 });
 

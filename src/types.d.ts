@@ -28,10 +28,10 @@ export type ConfigOptions = {
     copyAttachments?: boolean
     minLength?: number
 
-    allowList?: []
-    denyList?: [],
-    filters: ConfigFilters,
-    avatars: {
+    allowList?: string[]
+    denyList?: string[],
+    filters?: ConfigFilters,
+    avatars?: {
         [key: string]: string
     }
 };
@@ -46,10 +46,10 @@ export type ConfigRedirect = {
 export type ConfigFilters = {
     link1?: boolean
     link2?: boolean,
-    blockedUser: string[],
-    texts: string[],
-    onlyBot: boolean,
-    removeMedia: ("image" | "video" | "gif")[]
+    blockedUser?: string[],
+    texts?: string[],
+    onlyBot?: boolean,
+    removeMedia?: ("image" | "video" | "gif")[]
 }
 
 export type Config = {

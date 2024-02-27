@@ -7,7 +7,7 @@ export async function readConfig() {
     }
 
     // check if file exists
-    if(!(await fs.stat("./config.json")).isFile()) throw "config: file not found"; 
+    if(!(await fs.stat("./config.json")).isFile()) throw "config: file not found";
 
     let config = await fs.readJson("./config.json").catch(error => {
         // JSON is invalid
@@ -19,6 +19,16 @@ export async function readConfig() {
     if(typeof config.token != "string") throw "config: `token` is missing";
     if(!Array.isArray(config.redirects)) throw "config: `redirects` is not an array or is undefined";
     if(config.redirects.length == 0) throw "config: `redirects` is empty";
-    
+
     return config;
+}
+
+export async function updateConfig(func: (config: Config) => Promise<Config>) {
+    const configPath = process.cwd()+"/config.json";
+    let config = JSON.parse(fs.readFileSync(configPath).toString() || "{}");
+    const final = func(config);
+    final.catch(console.error).then(config => {
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
+        console.log("Config Updated");
+    })
 }
