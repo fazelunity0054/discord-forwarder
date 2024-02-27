@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.readConfig = void 0;
+exports.updateConfig = exports.readConfig = void 0;
 const fs = require("fs-extra");
 function readConfig() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -32,4 +32,16 @@ function readConfig() {
     });
 }
 exports.readConfig = readConfig;
+function updateConfig(func) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const configPath = process.cwd() + "/config.json";
+        let config = JSON.parse(fs.readFileSync(configPath).toString() || "{}");
+        const final = func(config);
+        final.catch(console.error).then(config => {
+            fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+            console.log("Config Updated");
+        });
+    });
+}
+exports.updateConfig = updateConfig;
 //# sourceMappingURL=readConfig.js.map

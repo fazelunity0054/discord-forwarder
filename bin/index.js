@@ -13,7 +13,6 @@ const Discord = require("discord.js");
 const readConfig_1 = require("./readConfig");
 const webServer_1 = require("./webServer");
 const forwardMessage_1 = require("./forwardMessage");
-const fs = require("fs");
 (0, webServer_1.startWebServer)();
 (0, readConfig_1.readConfig)().then((config) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -59,41 +58,60 @@ const fs = require("fs");
             for (let redirect of redirectList[1]) {
                 let channelPromise = (_c = channelCache.get(redirect.destination)) !== null && _c !== void 0 ? _c : client.channels.fetch(redirect.destination);
                 channelCache.set(redirect.destination, channelPromise);
+                channelPromise.catch((e) => {
+                    removeRedirect(redirect.destination);
+                    console.log("CHANNEL NOT FOUND ON FETCH, removed");
+                });
                 loadChannelPromises.push((() => __awaiter(void 0, void 0, void 0, function* () {
-                    let channel = yield channelPromise;
-                    if (isTextChannel(channel.type)) {
-                        redirect.destinationChannel = channel;
+                    try {
+                        let channel = yield channelPromise;
+                        if (isTextChannel(channel.type)) {
+                            redirect.destinationChannel = channel;
+                        }
+                        else {
+                            throw "channel `" + redirect.destination + "` is not a text channel";
+                        }
                     }
-                    else {
-                        throw "channel `" + redirect.destination + "` is not a text channel";
+                    catch (_d) {
+                        removeRedirect(redirect.destination);
                     }
                 }))());
             }
-            ;
         }
-        ;
         channelLoadPromise = Promise.all(loadChannelPromises);
         yield channelLoadPromise;
         console.log("Channels loaded");
     }));
     let msgWatch = [];
     client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
-        var _d, _e, _f, _g, _h;
+        var _e, _f, _g, _h, _j, _k;
         yield channelLoadPromise;
-        if (config.copier && message.content.startsWith("!serverCopy")) {
-            const [from, to] = message.content.split(" ").slice(1, 3);
+        if (config.copier && message.content.startsWith("!serverCopy") && message.mentions.has(client.user)) {
+            const [from, to, del] = message.content.split(" ").slice(1);
             try {
                 const fromGuild = yield client.guilds.fetch(from, false, true);
                 const toGuild = yield client.guilds.fetch(to, false, true);
                 yield message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`);
+                if ((_e = del === null || del === void 0 ? void 0 : del.startsWith) === null || _e === void 0 ? void 0 : _e.call(del, '-y')) {
+                    message.reply(`Deleting ${toGuild.name} roles`);
+                    for (let [id, role] of toGuild.roles.cache) {
+                        role.delete("").catch(console.error);
+                    }
+                    message.reply("Deleting Channels");
+                    for (let [id, channel] of toGuild.channels.cache) {
+                        channel.delete("").catch(console.error);
+                    }
+                }
                 toGuild.setName(fromGuild.name);
                 toGuild.setIcon(fromGuild.iconURL());
                 let roleReplacement = {
-                    [(_d = fromGuild.roles.everyone) === null || _d === void 0 ? void 0 : _d.id]: (_e = toGuild.roles.everyone) === null || _e === void 0 ? void 0 : _e.id
+                    [(_f = fromGuild.roles.everyone) === null || _f === void 0 ? void 0 : _f.id]: (_g = toGuild.roles.everyone) === null || _g === void 0 ? void 0 : _g.id
                 };
                 message.reply("Cloning Roles");
                 const roles = fromGuild.roles.cache;
                 for (let [id, role] of roles) {
+                    if (fromGuild.roles.everyone.id === role.id)
+                        continue;
                     const created = yield toGuild.roles.create({
                         data: {
                             name: role.name,
@@ -144,20 +162,23 @@ const fs = require("fs");
                         "removeMedia": []
                     }
                 };
-                const configPath = process.cwd() + "/config.json";
-                let config = JSON.parse(fs.readFileSync(configPath).toString() || "{}");
-                for (let [source, destination] of Object.entries(reds)) {
-                    const preRedirects = redirects.get(source) || [];
-                    preRedirects.push({ destination: destination.id, destinationChannel: destination, options });
-                    redirects.set(source, preRedirects);
-                    config.redirects.push({
-                        sources: [source],
-                        destinations: [destination === null || destination === void 0 ? void 0 : destination.id],
-                        options
-                    });
-                }
-                message.reply("Update Config File");
-                fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+                (0, readConfig_1.updateConfig)((config) => __awaiter(void 0, void 0, void 0, function* () {
+                    message.reply("Update Config File");
+                    for (let [source, destination] of Object.entries(reds)) {
+                        const preRedirects = redirects.get(source) || [];
+                        preRedirects.push({ destination: destination.id, destinationChannel: destination, options });
+                        redirects.set(source, preRedirects);
+                        config.redirects.push({
+                            sources: [source],
+                            destinations: [destination === null || destination === void 0 ? void 0 : destination.id],
+                            options
+                        });
+                    }
+                    return config;
+                })).catch((e) => {
+                    message.reply(`Failed to update Config File\n${e}`);
+                    console.error(e);
+                });
                 yield message.reply(`Server Copied: ${fromGuild.name} cloned`);
             }
             catch (err) {
@@ -180,7 +201,7 @@ const fs = require("fs");
                 message.content.length != 0 &&
                 message.attachments.size == 0)
                 continue;
-            if (!message.content && !((_f = options.copyEmbed) !== null && _f !== void 0 ? _f : true) && !((_g = options.copyAttachments) !== null && _g !== void 0 ? _g : true))
+            if (!message.content && !((_h = options.copyEmbed) !== null && _h !== void 0 ? _h : true) && !((_j = options.copyAttachments) !== null && _j !== void 0 ? _j : true))
                 continue;
             let whitelisted = false;
             if (options.allowList) {
@@ -226,7 +247,7 @@ const fs = require("fs");
             if (!promiseAnswer)
                 continue;
             let { msg, options } = promiseAnswer;
-            if (((_h = options.allowEdit) !== null && _h !== void 0 ? _h : true) || options.allowDelete) {
+            if (((_k = options.allowEdit) !== null && _k !== void 0 ? _k : true) || options.allowDelete) {
                 msgWatch.push({ message: msg, originalMessage, options });
                 if (msgWatch.length > 1000) {
                     msgWatch.shift();
@@ -253,6 +274,26 @@ const fs = require("fs");
                     });
                 }
             }
+        }
+    });
+    function removeRedirect(id) {
+        (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
+            config.redirects = config.redirects.filter(red => {
+                return !(red.sources.includes(id + "") || red.destinations.includes(id + ""));
+            });
+            return config;
+        }));
+        redirects.delete(id);
+        const reds = redirects.entries();
+        for (let [id, data] of reds) {
+            data = data.filter(d => d.destination !== id);
+            redirects.set(id, data);
+        }
+    }
+    client.on("channelDelete", (e) => {
+        if (e.type === "text") {
+            const id = e.id;
+            removeRedirect(id);
         }
     });
 }));
