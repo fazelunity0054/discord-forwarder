@@ -109,23 +109,59 @@ readConfig().then(async (config) => {
         // wait while channels are still loading
         await channelLoadPromise;
 
-        if (config.copier && message.content.startsWith("!serverCopy") && message.mentions.has(client.user)) {
-            const [from, to, del] = message.content.split(" ").slice(1);
+        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize")) && message.mentions.has(client.user)) {
+            const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = await client.guilds.fetch(from, false,true);
                 const toGuild = await client.guilds.fetch(to,false, true);
 
+                if (command === "!optimize") {
+                    message.reply(`OPTIMIZE OPERATION STARTED [${fromGuild.name} with ${toGuild.name}]`)
+
+                    let roleReplacement = {};
+                    message.reply(`Optimize Positions...`);
+                    for (let [id, role] of fromGuild.roles.cache.sort((a,b) => a.position > b.position ? -1:1)) {
+                        const created = toGuild.roles.cache.find(r => r.name === role.name);
+                        if (!created) continue;
+                        roleReplacement[id] = created.id;
+
+                        try {
+                            await created.setPosition(role.position);
+                        } catch {}
+                    }
+
+                    message.reply(`Optimize Overrides...`);
+                    for (let [id, channel] of fromGuild.channels.cache) {
+                        const created = toGuild.channels.cache.find(c => c.name === channel.name);
+                        if (!created) continue;
+
+                        try {
+                            await created.overwritePermissions(channel.permissionOverwrites.map(c => ({
+                                ...c,
+                                id: roleReplacement[c?.id] || c?.id
+                            })));
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    }
+                    message.reply("Optimize Finished");
+                    return;
+                }
 
                 await message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`)
 
                 if (del?.startsWith?.('-y')) {
                     message.reply(`Deleting ${toGuild.name} roles`);
                     for (let [id, role] of toGuild.roles.cache) {
-                        role.delete("").catch(console.error);
+                        try {
+                            await role.delete("").catch(console.error);
+                        } catch{}
                     }
                     message.reply("Deleting Channels")
                     for (let [id, channel] of toGuild.channels.cache) {
-                        channel.delete("").catch(console.error);
+                        try {
+                        await channel.delete("").catch(console.error);
+                        } catch{}
                     }
                 }
 
@@ -137,8 +173,10 @@ readConfig().then(async (config) => {
                 };
                 message.reply("Cloning Roles")
                 const roles = fromGuild.roles.cache;
-                for (let [id, role] of roles) {
+                for (let [id, role] of roles.sort((a,b) => a.position < b.position ? 0:1)) {
                     if (fromGuild.roles.everyone.id === role.id) continue;
+
+                    console.log(`CREATING ROLE \`${role.name}\``)
                     const created = await toGuild.roles.create({
                         data: {
                             name: role.name,
@@ -157,6 +195,7 @@ readConfig().then(async (config) => {
                 let channelReplacement = {};
 
                 for (let [id, category] of channels.filter(c => c.type === "category")) {
+                    console.log(`CREATING CATEGORY \`${category.name}\``)
                     const newCat = await toGuild.channels.create(category.name, {
                         ...category
                     });
@@ -164,23 +203,30 @@ readConfig().then(async (config) => {
                 }
 
                 let reds = {};
-
-
-                for (let [id, channel] of channels.filter(c => c.type !== "category")) {
+                for (let [id, channel] of channels.filter(c => c.type === "text" || c.type === "voice")) {
                     channel = channel as TextChannel | VoiceChannel;
-                    const newChannel = await toGuild.channels.create(channel.name, {
-                        ...channel,
-                        ...(channel.parent && ({
-                            parent: channelReplacement[channel.parent.id]
-                        })),
-                        permissionOverwrites: channel.permissionOverwrites.map(c => ({
-                            ...c,
-                            id: roleReplacement[c?.id] || c?.id
-                        }))
-                    })
+                    console.log(`CREATING CHANNEL[${channel.type}] <#${id}>`)
+                    try {
+                        const newChannel = await toGuild.channels.create(channel.name, {
+                            ...channel,
+                            ...(channel.parent && ({
+                                parent: channelReplacement[channel.parent.id]
+                            })),
+                            permissionOverwrites: channel.permissionOverwrites.map(c => ({
+                                ...c,
+                                id: roleReplacement[c?.id] || c?.id
+                            })),
+                            ...(channel.type === "voice" && ({
+                                bitrate: 96000
+                            }))
+                        })
 
-                    if (channel.type === "text") {
-                        reds[channel?.id] = newChannel;
+                        if (channel.type === "text") {
+                            reds[channel?.id] = newChannel;
+                        }
+                    } catch (e) {
+                        message.reply(`Failed to copy <#${channel.id}>\n\n${e}`);
+                        console.error(e);
                     }
                 }
 
@@ -229,8 +275,10 @@ readConfig().then(async (config) => {
                     console.error(e);
                 })
 
-                await message.reply(`Server Copied: ${fromGuild.name} cloned`)
+                await message.reply(`Server Copied: ${fromGuild.name} cloned`);
+                message.channel.send(`!optimize ${fromGuild.id} ${toGuild.id} <@${client.user.id}>`)
             } catch (err) {
+                console.error(err);
                 await message.reply(`Something went wrong during server copy from: ${from}, to: ${to}\n\nErr: ${err}`);
             }
 
