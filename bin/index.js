@@ -90,20 +90,55 @@ const forwardMessage_1 = require("./forwardMessage");
     client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
         var _e, _f, _g, _h, _j, _k;
         yield channelLoadPromise;
-        if (config.copier && message.content.startsWith("!serverCopy") && message.mentions.has(client.user)) {
-            const [from, to, del] = message.content.split(" ").slice(1);
+        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize")) && message.mentions.has(client.user)) {
+            const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = yield client.guilds.fetch(from, false, true);
                 const toGuild = yield client.guilds.fetch(to, false, true);
+                if (command === "!optimize") {
+                    message.reply(`OPTIMIZE OPERATION STARTED [${fromGuild.name} with ${toGuild.name}]`);
+                    let roleReplacement = {};
+                    message.reply(`Optimize Positions...`);
+                    for (let [id, role] of fromGuild.roles.cache.sort((a, b) => a.position > b.position ? -1 : 1)) {
+                        const created = toGuild.roles.cache.find(r => r.name === role.name);
+                        if (!created)
+                            continue;
+                        roleReplacement[id] = created.id;
+                        try {
+                            yield created.setPosition(role.position);
+                        }
+                        catch (_l) { }
+                    }
+                    message.reply(`Optimize Overrides...`);
+                    for (let [id, channel] of fromGuild.channels.cache) {
+                        const created = toGuild.channels.cache.find(c => c.name === channel.name);
+                        if (!created)
+                            continue;
+                        try {
+                            yield created.overwritePermissions(channel.permissionOverwrites.map(c => (Object.assign(Object.assign({}, c), { id: roleReplacement[c === null || c === void 0 ? void 0 : c.id] || (c === null || c === void 0 ? void 0 : c.id) }))));
+                        }
+                        catch (e) {
+                            console.error(e);
+                        }
+                    }
+                    message.reply("Optimize Finished");
+                    return;
+                }
                 yield message.reply(`Cloning ${fromGuild.name} to ${toGuild.name}(${toGuild.id})`);
                 if ((_e = del === null || del === void 0 ? void 0 : del.startsWith) === null || _e === void 0 ? void 0 : _e.call(del, '-y')) {
                     message.reply(`Deleting ${toGuild.name} roles`);
                     for (let [id, role] of toGuild.roles.cache) {
-                        role.delete("").catch(console.error);
+                        try {
+                            yield role.delete("").catch(console.error);
+                        }
+                        catch (_m) { }
                     }
                     message.reply("Deleting Channels");
                     for (let [id, channel] of toGuild.channels.cache) {
-                        channel.delete("").catch(console.error);
+                        try {
+                            yield channel.delete("").catch(console.error);
+                        }
+                        catch (_o) { }
                     }
                 }
                 toGuild.setName(fromGuild.name);
@@ -113,9 +148,10 @@ const forwardMessage_1 = require("./forwardMessage");
                 };
                 message.reply("Cloning Roles");
                 const roles = fromGuild.roles.cache;
-                for (let [id, role] of roles) {
+                for (let [id, role] of roles.sort((a, b) => a.position < b.position ? 0 : 1)) {
                     if (fromGuild.roles.everyone.id === role.id)
                         continue;
+                    console.log(`CREATING ROLE \`${role.name}\``);
                     const created = yield toGuild.roles.create({
                         data: {
                             name: role.name,
@@ -132,17 +168,27 @@ const forwardMessage_1 = require("./forwardMessage");
                 const channels = fromGuild.channels.cache;
                 let channelReplacement = {};
                 for (let [id, category] of channels.filter(c => c.type === "category")) {
+                    console.log(`CREATING CATEGORY \`${category.name}\``);
                     const newCat = yield toGuild.channels.create(category.name, Object.assign({}, category));
                     channelReplacement[id] = newCat === null || newCat === void 0 ? void 0 : newCat.id;
                 }
                 let reds = {};
-                for (let [id, channel] of channels.filter(c => c.type !== "category")) {
+                for (let [id, channel] of channels.filter(c => c.type === "text" || c.type === "voice")) {
                     channel = channel;
-                    const newChannel = yield toGuild.channels.create(channel.name, Object.assign(Object.assign(Object.assign({}, channel), (channel.parent && ({
-                        parent: channelReplacement[channel.parent.id]
-                    }))), { permissionOverwrites: channel.permissionOverwrites.map(c => (Object.assign(Object.assign({}, c), { id: roleReplacement[c === null || c === void 0 ? void 0 : c.id] || (c === null || c === void 0 ? void 0 : c.id) }))) }));
-                    if (channel.type === "text") {
-                        reds[channel === null || channel === void 0 ? void 0 : channel.id] = newChannel;
+                    console.log(`CREATING CHANNEL[${channel.type}] <#${id}>`);
+                    try {
+                        const newChannel = yield toGuild.channels.create(channel.name, Object.assign(Object.assign(Object.assign(Object.assign({}, channel), (channel.parent && ({
+                            parent: channelReplacement[channel.parent.id]
+                        }))), { permissionOverwrites: channel.permissionOverwrites.map(c => (Object.assign(Object.assign({}, c), { id: roleReplacement[c === null || c === void 0 ? void 0 : c.id] || (c === null || c === void 0 ? void 0 : c.id) }))) }), (channel.type === "voice" && ({
+                            bitrate: 96000
+                        }))));
+                        if (channel.type === "text") {
+                            reds[channel === null || channel === void 0 ? void 0 : channel.id] = newChannel;
+                        }
+                    }
+                    catch (e) {
+                        message.reply(`Failed to copy <#${channel.id}>\n\n${e}`);
+                        console.error(e);
                     }
                 }
                 message.reply("Register Redirect");
@@ -184,8 +230,10 @@ const forwardMessage_1 = require("./forwardMessage");
                     console.error(e);
                 });
                 yield message.reply(`Server Copied: ${fromGuild.name} cloned`);
+                message.channel.send(`!optimize ${fromGuild.id} ${toGuild.id} <@${client.user.id}>`);
             }
             catch (err) {
+                console.error(err);
                 yield message.reply(`Something went wrong during server copy from: ${from}, to: ${to}\n\nErr: ${err}`);
             }
             return;
