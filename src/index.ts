@@ -109,11 +109,44 @@ readConfig().then(async (config) => {
         // wait while channels are still loading
         await channelLoadPromise;
 
-        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize")) && message.mentions.has(client.user)) {
+        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
             const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = await client.guilds.fetch(from, false,true);
                 const toGuild = await client.guilds.fetch(to,false, true);
+
+                if (command === "!setRedirects") {
+                    message.reply(`Setup message redirect from ${fromGuild.name} to ${toGuild.name}...`)
+
+                    const textChannels = fromGuild.channels.cache.filter(c => c.type === "text");
+
+                    let n = 0;
+                    await updateConfig(async config => {
+                        for (let [id, channel] of textChannels) {
+                            const created = toGuild.channels.cache.find(c => c.type === "text" && c.name === channel.name);
+                            if (!created) continue;
+
+                            removeRedirect(id, config);
+                            removeRedirect(created.id, config);
+                            registerRedirect(channel.id, created as TextChannel, defaultOptions);
+                            config.redirects.push({
+                                sources: [channel.id],
+                                destinations: [created.id],
+                                options: defaultOptions
+                            });
+                            n++;
+                        }
+
+                        return config;
+                    }).catch((e)=>{
+                        message.reply(`FAILED TO UPDATE CONFIG FILE\n${e}`)
+
+                    })
+
+                    message.reply("Setup Finished Total Redirects: " + n);
+
+                    return;
+                }
 
                 if (command === "!optimize") {
                     message.reply(`OPTIMIZE OPERATION STARTED [${fromGuild.name} with ${toGuild.name}]`)
@@ -231,41 +264,18 @@ readConfig().then(async (config) => {
                 }
 
                 message.reply("Register Redirect");
-                const options = {
-                    "webhook": true,
-                    "webhookUsernameChannel": false,
-                    "allowMentions": false,
-                    "copyEmbed": true,
-                    "copyAttachments": true,
-                    "allowList": [
-                        "humans",
-                        "bots",
-                        "159985870458322944"
-                    ],
-                    "filters": {
-                        "link1": false,
-                        "link2": true,
-                        "blockedUser": [],
-                        "texts": [],
-                        "onlyBot": true,
-                        "removeMedia": []
-                    }
-                };
 
                 updateConfig(async config => {
                     message.reply("Update Config File");
 
                     for (let [source, destination] of Object.entries(reds)) {
-                        const preRedirects = redirects.get(source) || [];
-                        // @ts-ignore
-                        preRedirects.push({destination: destination.id, destinationChannel: destination, options} as any);
-                        redirects.set(source, preRedirects);
+                        registerRedirect(source, destination as TextChannel, defaultOptions);
 
                         config.redirects.push({
                             sources: [source],
                             //@ts-ignore
                             destinations: [destination?.id],
-                            options
+                            options: defaultOptions
                         });
                     }
 
@@ -384,13 +394,19 @@ readConfig().then(async (config) => {
         }
     });
 
-    function removeRedirect(id: string) {
-        updateConfig(async config => {
+    function removeRedirect(id: string, config: Partial<Config> = {}) {
+        if (Object.keys(config || {}).length) {
             config.redirects = config.redirects.filter(red => {
                 return !(red.sources.includes(id+"") || red.destinations.includes(id+""))
             })
-            return config;
-        });
+        } else {
+            updateConfig(async config => {
+                config.redirects = config.redirects.filter(red => {
+                    return !(red.sources.includes(id+"") || red.destinations.includes(id+""))
+                })
+                return config;
+            });
+        }
 
         redirects.delete(id);
 
@@ -399,6 +415,12 @@ readConfig().then(async (config) => {
             data = data.filter(d => d.destination !== id);
             redirects.set(id, data);
         }
+    }
+
+    function registerRedirect(source: string, destination: TextChannel, options: Partial<ConfigOptions>) {
+        const preRedirects = redirects.get(source) || [];
+        preRedirects.push({destination: destination.id, destinationChannel: destination, options} as any);
+        redirects.set(source, preRedirects);
     }
 
     client.on("channelDelete", (e)=>{
@@ -414,3 +436,24 @@ function isTextChannel(type: string) {
     // return type == "GUILD_PUBLIC_THREAD" || type == "GUILD_PRIVATE_THREAD" || type == "DM" || type == "GUILD_TEXT" || type == "GROUP_DM" || type == "GUILD_NEWS";
     return type == "text";
 }
+
+const defaultOptions = {
+    "webhook": true,
+    "webhookUsernameChannel": false,
+    "allowMentions": false,
+    "copyEmbed": true,
+    "copyAttachments": true,
+    "allowList": [
+        "humans",
+        "bots",
+        "159985870458322944"
+    ],
+    "filters": {
+        "link1": false,
+        "link2": true,
+        "blockedUser": [],
+        "texts": [],
+        "onlyBot": true,
+        "removeMedia": []
+    }
+};

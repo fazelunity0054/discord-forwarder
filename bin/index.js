@@ -90,11 +90,37 @@ const forwardMessage_1 = require("./forwardMessage");
     client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
         var _e, _f, _g, _h, _j, _k;
         yield channelLoadPromise;
-        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize")) && message.mentions.has(client.user)) {
+        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
             const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = yield client.guilds.fetch(from, false, true);
                 const toGuild = yield client.guilds.fetch(to, false, true);
+                if (command === "!setRedirects") {
+                    message.reply(`Setup message redirect from ${fromGuild.name} to ${toGuild.name}...`);
+                    const textChannels = fromGuild.channels.cache.filter(c => c.type === "text");
+                    let n = 0;
+                    yield (0, readConfig_1.updateConfig)((config) => __awaiter(void 0, void 0, void 0, function* () {
+                        for (let [id, channel] of textChannels) {
+                            const created = toGuild.channels.cache.find(c => c.type === "text" && c.name === channel.name);
+                            if (!created)
+                                continue;
+                            removeRedirect(id, config);
+                            removeRedirect(created.id, config);
+                            registerRedirect(channel.id, created, defaultOptions);
+                            config.redirects.push({
+                                sources: [channel.id],
+                                destinations: [created.id],
+                                options: defaultOptions
+                            });
+                            n++;
+                        }
+                        return config;
+                    })).catch((e) => {
+                        message.reply(`FAILED TO UPDATE CONFIG FILE\n${e}`);
+                    });
+                    message.reply("Setup Finished Total Redirects: " + n);
+                    return;
+                }
                 if (command === "!optimize") {
                     message.reply(`OPTIMIZE OPERATION STARTED [${fromGuild.name} with ${toGuild.name}]`);
                     let roleReplacement = {};
@@ -192,36 +218,14 @@ const forwardMessage_1 = require("./forwardMessage");
                     }
                 }
                 message.reply("Register Redirect");
-                const options = {
-                    "webhook": true,
-                    "webhookUsernameChannel": false,
-                    "allowMentions": false,
-                    "copyEmbed": true,
-                    "copyAttachments": true,
-                    "allowList": [
-                        "humans",
-                        "bots",
-                        "159985870458322944"
-                    ],
-                    "filters": {
-                        "link1": false,
-                        "link2": true,
-                        "blockedUser": [],
-                        "texts": [],
-                        "onlyBot": true,
-                        "removeMedia": []
-                    }
-                };
                 (0, readConfig_1.updateConfig)((config) => __awaiter(void 0, void 0, void 0, function* () {
                     message.reply("Update Config File");
                     for (let [source, destination] of Object.entries(reds)) {
-                        const preRedirects = redirects.get(source) || [];
-                        preRedirects.push({ destination: destination.id, destinationChannel: destination, options });
-                        redirects.set(source, preRedirects);
+                        registerRedirect(source, destination, defaultOptions);
                         config.redirects.push({
                             sources: [source],
                             destinations: [destination === null || destination === void 0 ? void 0 : destination.id],
-                            options
+                            options: defaultOptions
                         });
                     }
                     return config;
@@ -328,19 +332,31 @@ const forwardMessage_1 = require("./forwardMessage");
             }
         }
     });
-    function removeRedirect(id) {
-        (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
+    function removeRedirect(id, config = {}) {
+        if (Object.keys(config || {}).length) {
             config.redirects = config.redirects.filter(red => {
                 return !(red.sources.includes(id + "") || red.destinations.includes(id + ""));
             });
-            return config;
-        }));
+        }
+        else {
+            (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
+                config.redirects = config.redirects.filter(red => {
+                    return !(red.sources.includes(id + "") || red.destinations.includes(id + ""));
+                });
+                return config;
+            }));
+        }
         redirects.delete(id);
         const reds = redirects.entries();
         for (let [id, data] of reds) {
             data = data.filter(d => d.destination !== id);
             redirects.set(id, data);
         }
+    }
+    function registerRedirect(source, destination, options) {
+        const preRedirects = redirects.get(source) || [];
+        preRedirects.push({ destination: destination.id, destinationChannel: destination, options });
+        redirects.set(source, preRedirects);
     }
     client.on("channelDelete", (e) => {
         if (e.type === "text") {
@@ -352,4 +368,24 @@ const forwardMessage_1 = require("./forwardMessage");
 function isTextChannel(type) {
     return type == "text";
 }
+const defaultOptions = {
+    "webhook": true,
+    "webhookUsernameChannel": false,
+    "allowMentions": false,
+    "copyEmbed": true,
+    "copyAttachments": true,
+    "allowList": [
+        "humans",
+        "bots",
+        "159985870458322944"
+    ],
+    "filters": {
+        "link1": false,
+        "link2": true,
+        "blockedUser": [],
+        "texts": [],
+        "onlyBot": true,
+        "removeMedia": []
+    }
+};
 //# sourceMappingURL=index.js.map
