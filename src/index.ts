@@ -106,10 +106,14 @@ readConfig().then(async (config) => {
     // watch messages for edits and deletions
     let msgWatch: { message: Discord.Message, originalMessage: Discord.Message, options: ConfigOptions }[] = [];
     client.on("message", async message => {
-        // wait while channels are still loading
-        await channelLoadPromise;
+        try {
+            // wait while channels are still loading
+            if (channelLoadPromise) await channelLoadPromise;
+        } catch (e) {
+            console.error(e);
+        }
 
-        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
+        if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
             const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = await client.guilds.fetch(from, false,true);
