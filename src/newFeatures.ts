@@ -80,8 +80,12 @@ const thread = setInterval(async ()=>{
 		}
 		if (!str.trim()) return;
 		for (let id of ['610003881270706186']) {
-			const user = await _CLIENT.users.fetch(id);
-			await user.send(str);
+			try {
+				const user = await _CLIENT.users.fetch(id);
+				await user.send(str);
+			} catch (e) {
+				console.log("❌ OPEN ADMIN DIRECT",e);
+			}
 		}
 
 		_LOGS = [];
