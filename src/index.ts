@@ -343,7 +343,7 @@ function handleBotStart(config: Config) {
 
 		// skip if redirects does not exist
 		if (!redirectList) {
-			console.log('Redirect not found', message.guild.name, (message.channel as TextChannel)?.name)
+			console.log('Redirect not found', message.guild.name,"|||", (message.channel as TextChannel)?.name)
 			return;
 		}
 
