@@ -342,7 +342,11 @@ function handleBotStart(config: Config) {
 		let redirectList = redirects.get(id);
 
 		// skip if redirects does not exist
-		if (!redirectList) return;
+		if (!redirectList) {
+			console.log('Redirect not found', message.channel.toString())
+			return;
+		}
+
 
 		// loop through redirects
 		let promisesMsgs: {
@@ -473,4 +477,5 @@ function handleBotStart(config: Config) {
          console.log("Retry...")
          handleBotStart(config);
      })
+	client.on('error', console.log)
 }
