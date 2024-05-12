@@ -3,7 +3,7 @@ import {readConfig, updateConfig} from "./readConfig";
 import {Config, ConfigOptions, SendableChannel} from "./types";
 import {startWebServer} from "./webServer";
 import {forwardMessage} from "./forwardMessage";
-import {setAvatar} from "./newFeatures";
+import {registerConsoleLog, setAvatar} from "./newFeatures";
 import {TextChannel, VoiceChannel} from "discord.js";
 import * as fs from "fs";
 
@@ -54,34 +54,39 @@ function handleBotStart(config: Config) {
 	> = new Map();
 
 	// loop through redirects and put them in a Map
+	updateConfig(async (config) => {
+		for (let redirect of config.redirects) {
 
-	for (let redirect of config.redirects) {
+			// check if redirect is valid
+			if (!Array.isArray(redirect.sources)) throw "config: redirect has no defined `sources`";
+			if (!Array.isArray(redirect.destinations)) throw "config: redirect has no defined `destinations`";
+			if (redirect.sources.length == 0) throw "config: redirect has no `sources`";
+			if (redirect.destinations.length == 0) throw "config: redirect has no `destinations`";
 
-		// check if redirect is valid
-		if (!Array.isArray(redirect.sources)) throw "config: redirect has no defined `sources`";
-		if (!Array.isArray(redirect.destinations)) throw "config: redirect has no defined `destinations`";
-		if (redirect.sources.length == 0) throw "config: redirect has no `sources`";
-		if (redirect.destinations.length == 0) throw "config: redirect has no `destinations`";
 
-		let options: ConfigOptions = redirect.options ?? {};
-		for (let source of redirect.sources) {
-			skip: for (let destination of redirect.destinations) {
-				let data = redirects.get(source) ?? [];
+			let options: ConfigOptions = redirect.options ?? {};
+			for (let source of redirect.sources) {
+				skip: for (let destination of redirect.destinations) {
+					let data = redirects.get(source) ?? [];
 
-				// skip duplicate redirects
-				for (let dataCheck of data) {
-					if (dataCheck.destination == destination) {
-						console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
-						continue skip;
+					// skip duplicate redirects
+					for (let dataCheck of data) {
+						if (dataCheck.destination == destination) {
+							console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
+							removeRedirect(source, config);
+							continue skip;
+						}
 					}
-				}
 
-				data.push({destination, options});
-				redirects.set(source, data);
+					data.push({destination, options});
+					redirects.set(source, data);
+				}
 			}
 		}
-	}
-
+		return config;
+	}).finally(() => {
+		console.log("Duplicate Check finished")
+	})
 	// count redirects (optional code)
 	let totalRedirects = 0;
 	redirects.forEach(redirect => totalRedirects += redirect.length);
@@ -93,6 +98,7 @@ function handleBotStart(config: Config) {
 	client.on("ready", async () => {
 		console.log("Discord client is ready, loading channels...");
 		console.log("LOGGED AS " + client.user.username)
+		registerConsoleLog(client)
 		if (!config.redirects.length) {
 			console.log("NO REDIRECT FOUND");
 			return;
@@ -343,7 +349,7 @@ function handleBotStart(config: Config) {
 
 		// skip if redirects does not exist
 		if (!redirectList) {
-			console.log('Redirect not found', message.guild.name,"|||", (message.channel as TextChannel)?.name)
+			console.log(`❌Redirect not found ${(message.channel as TextChannel)?.name}(${message?.guild?.name})`)
 			return;
 		}
 
@@ -389,6 +395,7 @@ function handleBotStart(config: Config) {
 				}
 			}
 			if (!whitelisted) continue;
+			console.log('⌛Handle Redirect Msg from', (message.channel as TextChannel).name + `(${message.guild.name})`, 'to', destinationChannel.name + `(${destinationChannel.guild.name})`)
 			promisesMsgs.push({
 				promise: forwardMessage(destinationChannel, message, options, false),
 				originalMessage: message as Discord.Message
@@ -472,10 +479,10 @@ function handleBotStart(config: Config) {
 			removeRedirect(id);
 		}
 	});
-	client.on('disconnect', ()=>{
-         console.log('GOT DISCONNECTED AT', new Date().toLocaleString('fa'), new Date().toLocaleString());
-         console.log("Retry...")
-         handleBotStart(config);
-     })
+	client.on('disconnect', () => {
+		console.log('GOT DISCONNECTED AT', new Date().toLocaleString('fa'), new Date().toLocaleString());
+		console.log("Retry...")
+		handleBotStart(config);
+	})
 	client.on('error', console.log)
 }

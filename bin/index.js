@@ -33,7 +33,7 @@ const forwardMessage_1 = require("./forwardMessage");
             skip: for (let destination of redirect.destinations) {
                 let data = (_b = redirects.get(source)) !== null && _b !== void 0 ? _b : [];
                 for (let dataCheck of data) {
-                    if (dataCheck.destination == destination) {
+                    if (dataCheck.destination === destination) {
                         console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
                         continue skip;
                     }

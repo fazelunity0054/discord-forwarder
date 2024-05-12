@@ -3,6 +3,8 @@ import {ConfigOptions, SendableChannel} from './types';
 import {fetchWebhook} from "./webhookManager";
 import {hasHttpLinks, removeHttpLinks} from "./newFeatures";
 import {text} from "node:stream/consumers";
+import {loggers} from "winston";
+import {TextChannel} from "discord.js";
 
 export async function forwardMessage(
 	channel: SendableChannel,
