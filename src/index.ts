@@ -152,7 +152,7 @@ function handleBotStart(config: Config) {
 			console.error(e);
 		}
 
-		if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
+		if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects") || message.content.startsWith("!details")) && message.mentions.has(client.user)) {
 			const [command, from, to, del] = message.content.split(" ");
 			try {
 				const fromGuild = await client.guilds.fetch(from, false, true);
@@ -188,6 +188,32 @@ function handleBotStart(config: Config) {
 
 					message.reply("Setup Finished Total Redirects: " + n);
 
+					return;
+				}
+
+				if (command === '!details') {
+					const channel = message.channel
+					type VType = ReturnType<typeof redirects.get>;
+					const echo = (obj: any) => `${'```json\n'}${JSON.stringify(obj,null,2)}${"\n```"}`;
+
+					let redirectsObj: {
+						[key: string]: VType
+					} = {};
+					redirects.forEach((v,k) => {
+						redirectsObj[k] = v;
+					})
+
+					const source = redirectsObj[channel.id];
+					const destinations = Object.fromEntries(Object.entries(redirectsObj).filter(([key, value]: [string, VType]) => {
+						return value.find(d => d.destination === channel.id)
+					}))
+					let content = `
+					isSource: ${(!!source)+""}
+					become From: ${(await Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id,false,true).catch(()=>false)))).filter(Boolean).map((c: Discord.TextChannel) => `${c?.name} => ${c?.guild?.name}`).join("\n")}
+					
+					`
+
+					await message.channel.send(content);
 					return;
 				}
 
@@ -353,10 +379,7 @@ function handleBotStart(config: Config) {
 		let redirectList = redirects.get(id);
 
 		// skip if redirects does not exist
-		if (!redirectList) {
-			console.log(`❌Redirect not found ${(message.channel as TextChannel)?.name}(${message?.guild?.name})`)
-			return;
-		}
+		if (!redirectList) return;
 
 
 		// loop through redirects
@@ -400,7 +423,6 @@ function handleBotStart(config: Config) {
 				}
 			}
 			if (!whitelisted) continue;
-			console.log('⌛Handle Redirect Msg from', (message.channel as TextChannel).name + `(${message.guild.name})`, 'to', destinationChannel.name + `(${destinationChannel.guild.name})`)
 			promisesMsgs.push({
 				promise: forwardMessage(destinationChannel, message, options, false),
 				originalMessage: message as Discord.Message
