@@ -39,10 +39,11 @@ const defaultOptions = {
 
 
 function handleBotStart(config: Config) {
-
-	// load Discord.js client
 	let client = new Discord.Client({});
-	client.login(config.token);
+	client.login(config.token).catch((e)=>{
+		console.error('LOGIN FAILED',e);
+		handleBotStart(config);
+	});
 
 	let redirects: Map<
 		string, // source channel
@@ -101,6 +102,11 @@ function handleBotStart(config: Config) {
 	console.log("Discord.js is loading...");
 	let channelLoadPromise: Promise<void[]>;
 	client.on("ready", async () => {
+		setTimeout(()=>{
+			console.log('destroy')
+			client.destroy();
+			handleBotStart(config);
+		}, 10 * 60 * 1000);
 		console.log("Discord client is ready, loading channels...");
 		console.log("LOGGED AS " + client.user.username)
 		registerConsoleLog(client)
@@ -512,4 +518,5 @@ function handleBotStart(config: Config) {
 		handleBotStart(config);
 	})
 	client.on('error', console.log)
+
 }

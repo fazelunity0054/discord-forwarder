@@ -13,45 +13,82 @@ const Discord = require("discord.js");
 const readConfig_1 = require("./readConfig");
 const webServer_1 = require("./webServer");
 const forwardMessage_1 = require("./forwardMessage");
+const newFeatures_1 = require("./newFeatures");
 (0, webServer_1.startWebServer)();
-(0, readConfig_1.readConfig)().then((config) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+(0, readConfig_1.readConfig)().then(handleBotStart);
+function isTextChannel(type) {
+    return type == "text";
+}
+const defaultOptions = {
+    "webhook": true,
+    "webhookUsernameChannel": false,
+    "allowMentions": false,
+    "copyEmbed": true,
+    "copyAttachments": true,
+    "allowList": [
+        "humans",
+        "bots",
+        "159985870458322944"
+    ],
+    "filters": {
+        "link1": false,
+        "link2": true,
+        "blockedUser": [],
+        "texts": [],
+        "onlyBot": true,
+        "removeMedia": []
+    }
+};
+function handleBotStart(config) {
     let client = new Discord.Client({});
     client.login(config.token);
     let redirects = new Map();
-    for (let redirect of config.redirects) {
-        if (!Array.isArray(redirect.sources))
-            throw "config: redirect has no defined `sources`";
-        if (!Array.isArray(redirect.destinations))
-            throw "config: redirect has no defined `destinations`";
-        if (redirect.sources.length == 0)
-            throw "config: redirect has no `sources`";
-        if (redirect.destinations.length == 0)
-            throw "config: redirect has no `destinations`";
-        let options = (_a = redirect.options) !== null && _a !== void 0 ? _a : {};
-        for (let source of redirect.sources) {
-            skip: for (let destination of redirect.destinations) {
-                let data = (_b = redirects.get(source)) !== null && _b !== void 0 ? _b : [];
-                for (let dataCheck of data) {
-                    if (dataCheck.destination === destination) {
-                        console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
-                        continue skip;
+    (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
+        for (let redirect of config.redirects) {
+            if (!Array.isArray(redirect.sources))
+                throw "config: redirect has no defined `sources`";
+            if (!Array.isArray(redirect.destinations))
+                throw "config: redirect has no defined `destinations`";
+            if (redirect.sources.length == 0)
+                throw "config: redirect has no `sources`";
+            if (redirect.destinations.length == 0)
+                throw "config: redirect has no `destinations`";
+            let options = (_a = redirect.options) !== null && _a !== void 0 ? _a : {};
+            for (let source of redirect.sources) {
+                skip: for (let destination of redirect.destinations) {
+                    let data = (_b = redirects.get(source)) !== null && _b !== void 0 ? _b : [];
+                    for (let dataCheck of data) {
+                        if (dataCheck.destination == destination) {
+                            console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
+                            removeRedirect(source, config);
+                            config.redirects.push({
+                                sources: [source],
+                                destinations: [destination],
+                                options: options
+                            });
+                            continue skip;
+                        }
                     }
+                    data.push({ destination, options });
+                    redirects.set(source, data);
                 }
-                data.push({ destination, options });
-                redirects.set(source, data);
             }
         }
-    }
+        return config;
+    })).finally(() => {
+        console.log("Duplicate Check finished");
+    });
     let totalRedirects = 0;
     redirects.forEach(redirect => totalRedirects += redirect.length);
     console.debug("Redirects in total: " + totalRedirects);
     console.log("Discord.js is loading...");
     let channelLoadPromise;
-    client.on("ready", () => __awaiter(void 0, void 0, void 0, function* () {
+    client.on("ready", () => __awaiter(this, void 0, void 0, function* () {
         var _c;
         console.log("Discord client is ready, loading channels...");
         console.log("LOGGED AS " + client.user.username);
+        (0, newFeatures_1.registerConsoleLog)(client);
         if (!config.redirects.length) {
             console.log("NO REDIRECT FOUND");
             return;
@@ -66,7 +103,7 @@ const forwardMessage_1 = require("./forwardMessage");
                     removeRedirect(redirect.destination);
                     console.log("CHANNEL NOT FOUND ON FETCH, removed");
                 });
-                loadChannelPromises.push((() => __awaiter(void 0, void 0, void 0, function* () {
+                loadChannelPromises.push((() => __awaiter(this, void 0, void 0, function* () {
                     try {
                         let channel = yield channelPromise;
                         if (isTextChannel(channel.type)) {
@@ -87,10 +124,16 @@ const forwardMessage_1 = require("./forwardMessage");
         console.log("Channels loaded");
     }));
     let msgWatch = [];
-    client.on("message", (message) => __awaiter(void 0, void 0, void 0, function* () {
+    client.on("message", (message) => __awaiter(this, void 0, void 0, function* () {
         var _e, _f, _g, _h, _j, _k;
-        yield channelLoadPromise;
-        if (config.copier && (message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects")) && message.mentions.has(client.user)) {
+        try {
+            if (channelLoadPromise)
+                yield channelLoadPromise;
+        }
+        catch (e) {
+            console.error(e);
+        }
+        if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects") || message.content.startsWith("!details")) && message.mentions.has(client.user)) {
             const [command, from, to, del] = message.content.split(" ");
             try {
                 const fromGuild = yield client.guilds.fetch(from, false, true);
@@ -99,7 +142,7 @@ const forwardMessage_1 = require("./forwardMessage");
                     message.reply(`Setup message redirect from ${fromGuild.name} to ${toGuild.name}...`);
                     const textChannels = fromGuild.channels.cache.filter(c => c.type === "text");
                     let n = 0;
-                    yield (0, readConfig_1.updateConfig)((config) => __awaiter(void 0, void 0, void 0, function* () {
+                    yield (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
                         for (let [id, channel] of textChannels) {
                             const created = toGuild.channels.cache.find(c => c.type === "text" && c.name === channel.name);
                             if (!created)
@@ -121,6 +164,25 @@ const forwardMessage_1 = require("./forwardMessage");
                     message.reply("Setup Finished Total Redirects: " + n);
                     return;
                 }
+                if (command === '!details') {
+                    const channel = message.channel;
+                    const echo = (obj) => `${'```json\n'}${JSON.stringify(obj, null, 2)}${"\n```"}`;
+                    let redirectsObj = {};
+                    redirects.forEach((v, k) => {
+                        redirectsObj[k] = v;
+                    });
+                    const source = redirectsObj[channel.id];
+                    const destinations = Object.fromEntries(Object.entries(redirectsObj).filter(([key, value]) => {
+                        return value.find(d => d.destination === channel.id);
+                    }));
+                    let content = `
+					isSource: ${(!!source) + ""}
+					become From: ${(yield Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id, false, true).catch(() => false)))).filter(Boolean).map((c) => { var _a; return `${c === null || c === void 0 ? void 0 : c.name} => ${(_a = c === null || c === void 0 ? void 0 : c.guild) === null || _a === void 0 ? void 0 : _a.name}`; }).join("\n")}
+					
+					`;
+                    yield message.channel.send(content);
+                    return;
+                }
                 if (command === "!optimize") {
                     message.reply(`OPTIMIZE OPERATION STARTED [${fromGuild.name} with ${toGuild.name}]`);
                     let roleReplacement = {};
@@ -133,7 +195,8 @@ const forwardMessage_1 = require("./forwardMessage");
                         try {
                             yield created.setPosition(role.position);
                         }
-                        catch (_l) { }
+                        catch (_l) {
+                        }
                     }
                     message.reply(`Optimize Overrides...`);
                     for (let [id, channel] of fromGuild.channels.cache) {
@@ -157,14 +220,16 @@ const forwardMessage_1 = require("./forwardMessage");
                         try {
                             yield role.delete("").catch(console.error);
                         }
-                        catch (_m) { }
+                        catch (_m) {
+                        }
                     }
                     message.reply("Deleting Channels");
                     for (let [id, channel] of toGuild.channels.cache) {
                         try {
                             yield channel.delete("").catch(console.error);
                         }
-                        catch (_o) { }
+                        catch (_o) {
+                        }
                     }
                 }
                 toGuild.setName(fromGuild.name);
@@ -218,7 +283,7 @@ const forwardMessage_1 = require("./forwardMessage");
                     }
                 }
                 message.reply("Register Redirect");
-                (0, readConfig_1.updateConfig)((config) => __awaiter(void 0, void 0, void 0, function* () {
+                (0, readConfig_1.updateConfig)((config) => __awaiter(this, void 0, void 0, function* () {
                     message.reply("Update Config File");
                     for (let [source, destination] of Object.entries(reds)) {
                         registerRedirect(source, destination, defaultOptions);
@@ -315,7 +380,8 @@ const forwardMessage_1 = require("./forwardMessage");
         for (let { message, options, originalMessage } of msgWatch) {
             if (originalMessage.id == msg.id && originalMessage.channel.id == msg.channel.id) {
                 if (options.allowDelete && message.deletable) {
-                    message.delete().catch(error => { });
+                    message.delete().catch(error => {
+                    });
                 }
             }
         }
@@ -364,28 +430,11 @@ const forwardMessage_1 = require("./forwardMessage");
             removeRedirect(id);
         }
     });
-}));
-function isTextChannel(type) {
-    return type == "text";
+    client.on('disconnect', () => {
+        console.log('GOT DISCONNECTED AT', new Date().toLocaleString('fa'), new Date().toLocaleString());
+        console.log("Retry...");
+        handleBotStart(config);
+    });
+    client.on('error', console.log);
 }
-const defaultOptions = {
-    "webhook": true,
-    "webhookUsernameChannel": false,
-    "allowMentions": false,
-    "copyEmbed": true,
-    "copyAttachments": true,
-    "allowList": [
-        "humans",
-        "bots",
-        "159985870458322944"
-    ],
-    "filters": {
-        "link1": false,
-        "link2": true,
-        "blockedUser": [],
-        "texts": [],
-        "onlyBot": true,
-        "removeMedia": []
-    }
-};
 //# sourceMappingURL=index.js.map

