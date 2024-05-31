@@ -73,8 +73,7 @@ function handleBotStart(config: Config) {
 					// skip duplicate redirects
 					for (let dataCheck of data) {
 						if (dataCheck.destination == destination) {
-							console.warn("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
-							removeRedirect(source, config);
+							console.log("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
 							config.redirects.push({
 								sources: [source],
 								destinations: [destination],
@@ -125,8 +124,7 @@ function handleBotStart(config: Config) {
 				let channelPromise = channelCache.get(redirect.destination) ?? client.channels.fetch(redirect.destination);
 				channelCache.set(redirect.destination, channelPromise as Promise<SendableChannel>);
 				channelPromise.catch((e) => {
-					removeRedirect(redirect.destination);
-					console.log("CHANNEL NOT FOUND ON FETCH, removed");
+					console.log("CHANNEL NOT FOUND ON FETCH");
 				})
 				loadChannelPromises.push((async () => {
 					try {
@@ -137,7 +135,7 @@ function handleBotStart(config: Config) {
 							throw "channel `" + redirect.destination + "` is not a text channel";
 						}
 					} catch {
-						removeRedirect(redirect.destination);
+						console.log("CHANNEL NOT FOUND ON FETCH [2]");
 					}
 				})());
 

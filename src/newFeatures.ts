@@ -95,9 +95,4 @@ const thread = setInterval(async ()=>{
 }, 1000)
 export function registerConsoleLog(client: Client) {
 	_CLIENT = client;
-	console.log = (...args)=>{
-		if (args?.[0] === ">") return;
-		originLog(">",...args);
-		_LOGS.push(args);
-	}
 }
