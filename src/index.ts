@@ -168,8 +168,6 @@ function handleBotStart(config: Config) {
 							const created = toGuild.channels.cache.find(c => c.type === "text" && c.name === channel.name);
 							if (!created) continue;
 
-							removeRedirect(id, config);
-							removeRedirect(created.id, config);
 							registerRedirect(channel.id, created as TextChannel, defaultOptions);
 							config.redirects.push({
 								sources: [channel.id],
