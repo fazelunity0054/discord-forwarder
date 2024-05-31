@@ -206,7 +206,7 @@ function handleBotStart(config: Config) {
 					}))
 					let content = `
 					isSource: ${(!!source)+""}
-					become From: ${(await Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id,false,true).catch(()=>false)))).filter(Boolean).map((c: Discord.TextChannel) => `${c?.name} => ${c?.guild?.name}`).join("\n")}
+					become From: ${(await Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id,false,true).catch(()=>false)))).filter(Boolean).map((c: Discord.TextChannel) => `${c?.name}(<#${c.id}>) => ${c?.guild?.name}(${c?.guild?.id})`).join("\n")}
 					
 					`
 
