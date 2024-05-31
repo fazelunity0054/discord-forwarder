@@ -74,11 +74,6 @@ function handleBotStart(config: Config) {
 					for (let dataCheck of data) {
 						if (dataCheck.destination == destination) {
 							console.log("config: redirect from `" + source + "` to `" + destination + "` is a duplicate, I will accept the only the first redirect to avoid duplicate redirects");
-							config.redirects.push({
-								sources: [source],
-								destinations: [destination],
-								options: options
-							});
 							continue skip;
 						}
 					}
