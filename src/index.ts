@@ -29,10 +29,10 @@ const defaultOptions = {
 	],
 	"filters": {
 		"link1": false,
-		"link2": true,
+		"link2": false,
 		"blockedUser": [],
 		"texts": [],
-		"onlyBot": true,
+
 		"removeMedia": []
 	}
 };
@@ -420,6 +420,17 @@ function handleBotStart(config: Config) {
 				}
 			}
 			if (!whitelisted) continue;
+
+			// Handle Mentioned Roles
+			if (!!message.mentions.roles?.size) {
+				const guild = await destinationChannel.guild.fetch();
+				for (let [id, role] of message.mentions.roles) {
+					const clonedRole = guild.roles.cache.find( r => r.name === role.name);
+					message.content = message.content.replaceAll(id, clonedRole.id)
+				}
+			}
+
+
 			promisesMsgs.push({
 				promise: forwardMessage(destinationChannel, message, options, false),
 				originalMessage: message as Discord.Message

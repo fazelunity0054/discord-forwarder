@@ -62,7 +62,7 @@ Example configurations:
         ],
         "filters": {
           "link1": false,
-          "link2": true,
+          "link2": false,
           "blockedUser": [],
           "texts": ["nigga"],
           "onlyBot": false,
@@ -121,7 +121,7 @@ Example configurations:
         ],
         "filters": {
           "link1": false,
-          "link2": true,
+          "link2": false,
           "blockedUser": [],
           "texts": ["nigga"],
           "onlyBot": false,

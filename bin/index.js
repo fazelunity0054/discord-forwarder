@@ -32,10 +32,10 @@ const defaultOptions = {
     ],
     "filters": {
         "link1": false,
-        "link2": true,
+        "link2": false,
         "blockedUser": [],
         "texts": [],
-        "onlyBot": true,
+        
         "removeMedia": []
     }
 };
