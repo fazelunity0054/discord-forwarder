@@ -426,6 +426,10 @@ function handleBotStart(config: Config) {
 				const guild = await destinationChannel.guild.fetch();
 				for (let [id, role] of message.mentions.roles) {
 					const clonedRole = guild.roles.cache.find( r => r.name === role.name);
+					if (!clonedRole) {
+						console.log(`Cloud not find role ${role.name} in ${guild.name} server`);
+						continue;
+					}
 					message.content = message.content.replaceAll(id, clonedRole.id)
 				}
 			}
