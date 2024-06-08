@@ -40,8 +40,8 @@ const defaultOptions = {
 
 function handleBotStart(config: Config) {
 	let client = new Discord.Client({});
-	client.login(config.token).catch((e)=>{
-		console.error('LOGIN FAILED',e);
+	client.login(config.token).catch((e) => {
+		console.error('LOGIN FAILED', e);
 		handleBotStart(config);
 	});
 
@@ -96,7 +96,7 @@ function handleBotStart(config: Config) {
 	console.log("Discord.js is loading...");
 	let channelLoadPromise: Promise<void[]>;
 	client.on("ready", async () => {
-		setTimeout(()=>{
+		setTimeout(() => {
 			console.log('destroy')
 			client.destroy();
 			handleBotStart(config);
@@ -151,9 +151,89 @@ function handleBotStart(config: Config) {
 			console.error(e);
 		}
 
-		if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!setRedirects") || message.content.startsWith("!details")) && message.mentions.has(client.user)) {
+		if ((message.content.startsWith("!serverCopy") || message.content.startsWith("!optimize") || message.content.startsWith("!forward") || message.content.startsWith("!setRedirects") || message.content.startsWith("!details")) && message.mentions.has(client.user)) {
 			const [command, from, to, del] = message.content.split(" ");
 			try {
+				if (command === '!details') {
+					const channel = message.channel
+					type VType = ReturnType<typeof redirects.get>;
+					const echo = (obj: any) => `${'```json\n'}${JSON.stringify(obj, null, 2)}${"\n```"}`;
+
+					let redirectsObj: {
+						[key: string]: VType
+					} = {};
+					redirects.forEach((v, k) => {
+						redirectsObj[k] = v;
+					})
+
+					const source = redirectsObj[channel.id];
+					const destinations = Object.fromEntries(Object.entries(redirectsObj).filter(([key, value]: [string, VType]) => {
+						return value.find(d => d.destination === channel.id)
+					}))
+					let content = `
+					isSource: ${(!!source) + ""}
+					become From: ${(await Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id, false, true).catch(() => false)))).filter(Boolean).map((c: Discord.TextChannel) => `${c?.name}(<#${c.id}>) => ${c?.guild?.name}(${c?.guild?.id})`).join("\n")}
+					
+					`
+
+					await message.channel.send(content);
+					return;
+				}
+				if (command === "!forward") {
+					let txt = message.content;
+					let msg = "INIT\n";
+					const inside = (symbol1 = '[', symbol2 = ']') =>
+						txt.substring(txt.indexOf(symbol1) + symbol1.length, txt.indexOf(symbol2)).replaceAll("\n", " ")
+
+					let from = inside().split(" ").filter(Boolean);
+					let to = inside("{","}").split(" ").filter(Boolean);
+
+					await updateConfig(async config => {
+						let channels: {
+							[key: string]: TextChannel
+						} = {}
+
+						for (let channelId of [...from, ...to]) {
+							try {
+								const fetch = await client.channels.fetch(channelId);
+								if (fetch.type !== 'text') throw("INVALID CHANNEL TYPE");
+								channels[channelId] = fetch as TextChannel;
+							} catch (e: any) {
+								to = to.filter(id => id !== channelId);
+								from = from.filter(id => id !== channelId);
+								console.error(e);
+								msg += `FAIL TO REGISTER REDIRECT[${channelId}]: ${e?.message ?? e}\n`
+							}
+						}
+
+						for (let sourceId of from) {
+							const source = channels[sourceId];
+							if (!source) {
+								msg+=`SOURCE NOT FOND[${sourceId}]\n`
+								continue;
+							}
+							for (let destinationId of to) {
+								const destination = channels[destinationId];
+								if (!destination) {
+									msg += `DESTINATION NOT FOUND[${destinationId}]\n`
+									continue;
+								}
+
+								registerRedirect(sourceId, destination, defaultOptions);
+								msg += `RED F:${source.name} D:${destination.name} ✅\n`
+							}
+						}
+
+						config.redirects.push({
+							sources: from,
+							destinations: to
+						})
+						await message.reply(msg.slice(0, 1800));
+						return config;
+					})
+					return;
+				}
+
 				const fromGuild = await client.guilds.fetch(from, false, true);
 				const toGuild = await client.guilds.fetch(to, false, true);
 
@@ -185,32 +265,6 @@ function handleBotStart(config: Config) {
 
 					message.reply("Setup Finished Total Redirects: " + n);
 
-					return;
-				}
-
-				if (command === '!details') {
-					const channel = message.channel
-					type VType = ReturnType<typeof redirects.get>;
-					const echo = (obj: any) => `${'```json\n'}${JSON.stringify(obj,null,2)}${"\n```"}`;
-
-					let redirectsObj: {
-						[key: string]: VType
-					} = {};
-					redirects.forEach((v,k) => {
-						redirectsObj[k] = v;
-					})
-
-					const source = redirectsObj[channel.id];
-					const destinations = Object.fromEntries(Object.entries(redirectsObj).filter(([key, value]: [string, VType]) => {
-						return value.find(d => d.destination === channel.id)
-					}))
-					let content = `
-					isSource: ${(!!source)+""}
-					become From: ${(await Promise.all(Object.keys(destinations).map(id => client.channels.fetch(id,false,true).catch(()=>false)))).filter(Boolean).map((c: Discord.TextChannel) => `${c?.name}(<#${c.id}>) => ${c?.guild?.name}(${c?.guild?.id})`).join("\n")}
-					
-					`
-
-					await message.channel.send(content);
 					return;
 				}
 
@@ -367,7 +421,7 @@ function handleBotStart(config: Config) {
 		let id = message.channel.id;
 
 		// skip our messages
-		// if (message.author.id == client.user.id) return TODO: here
+		if (message.author.id == client.user.id) return;
 
 		// ignore other types of messages (pinned, joined user)
 		if (message.type != "DEFAULT") return;
