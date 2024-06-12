@@ -226,7 +226,8 @@ function handleBotStart(config: Config) {
 
 						config.redirects.push({
 							sources: from,
-							destinations: to
+							destinations: to,
+							options: defaultOptions
 						})
 						await message.reply(msg.slice(0, 1800));
 						return config;
